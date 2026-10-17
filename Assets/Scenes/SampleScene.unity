@@ -243,6 +243,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -368,6 +369,21 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a934bff670f825a4a8d1caf9170a59a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StationViewSwitcher
+  drivingView: {fileID: 1820003427}
+  powerView: {fileID: 378832855}
+  repairView: {fileID: 1561045171}
 --- !u!1 &377045320
 GameObject:
   m_ObjectHideFlags: 0
@@ -969,13 +985,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1561045170}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.12278779, y: 0.6963643, z: -0.12278779, w: 0.6963643}
   m_LocalPosition: {x: 0.7, y: 1.7, z: -2}
-  m_LocalScale: {x: 20, y: 90, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 684512650}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 20, y: 90, z: 0}
 --- !u!1 &1628931506
 GameObject:
   m_ObjectHideFlags: 0
@@ -1209,6 +1225,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1758087475}
+  - component: {fileID: 1758087476}
+  - component: {fileID: 1758087477}
+  - component: {fileID: 1758087478}
   m_Layer: 0
   m_Name: Submarine
   m_TagString: Untagged
@@ -1239,6 +1258,58 @@ Transform:
   - {fileID: 684512650}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1758087476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758087474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 019ebf9a0d4cf8e4cbb670bf1c442b34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubmarineController
+  acceleration: 1
+  maxVerticalSpeed: 2
+  verticalAcceleration: 0.8
+  naturalSinkSpeed: 0.3
+  trimStep: 0.1
+  maxTrim: 1
+--- !u!114 &1758087477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758087474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a4f79b16ee6849459a5a828afb831f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubmarinePower
+  batteryCapacity: 100
+  baseDrain: 0.01
+  sonarDrain: 0.03
+  pumpDrain: 0.08
+  lowGearDrain: 0.02
+  cruiseGearDrain: 0.06
+  highGearDrain: 0.14
+  sonarSwitch: 1
+  pumpSwitch: 0
+--- !u!114 &1758087478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758087474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c4bc423d6288584b9d6c5ea7acd3cec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubmarineOxygen
+  oxygenDuration: 600
 --- !u!1 &1812272131
 GameObject:
   m_ObjectHideFlags: 0
