@@ -19,7 +19,7 @@ public class SubmarinePower : MonoBehaviour
     public float cruiseGearDrain = 0.06f;
     public float highGearDrain = 0.14f;
 
-    [Header("开关初始状态")]
+    [Header("设备开关")]
     public bool sonarSwitch = true;
     public bool pumpSwitch = false;
 
@@ -27,8 +27,16 @@ public class SubmarinePower : MonoBehaviour
     private SubmarineController controller;
 
     public bool HasPower => battery > 0f;
+
     public bool SonarWorking => HasPower && sonarSwitch;
     public bool PumpWorking => HasPower && pumpSwitch;
+
+    public float BatteryRemaining => battery;
+
+    public float BatteryPercentage =>
+        batteryCapacity > 0f
+            ? battery / batteryCapacity * 100f
+            : 0f;
 
     private void Awake()
     {
@@ -49,6 +57,7 @@ public class SubmarinePower : MonoBehaviour
             if (keyboard.xKey.wasPressedThisFrame)
                 pumpSwitch = !pumpSwitch;
         }
+
 #elif ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.Z))
             sonarSwitch = !sonarSwitch;
@@ -79,49 +88,19 @@ public class SubmarinePower : MonoBehaviour
 
     private float GetTotalDrain()
     {
-        if (!HasPower) return 0f;
+        if (!HasPower)
+            return 0f;
 
-        float drain = baseDrain + GetPropulsionDrain();
+        float drain =
+            Mathf.Max(0f, baseDrain)
+            + Mathf.Max(0f, GetPropulsionDrain());
 
-        if (sonarSwitch) drain += sonarDrain;
-        if (pumpSwitch) drain += pumpDrain;
+        if (sonarSwitch)
+            drain += Mathf.Max(0f, sonarDrain);
+
+        if (pumpSwitch)
+            drain += Mathf.Max(0f, pumpDrain);
 
         return drain;
-    }
-
-    private string DeviceState(bool switchOn)
-    {
-        if (!switchOn) return "OFF";
-        return HasPower ? "ON" : "NO POWER";
-    }
-
-    private void OnGUI()
-    {
-        float left = Mathf.Max(420f, Screen.width - 350f);
-
-        GUI.Box(new Rect(left, 20, 330, 240), "POWER PANEL");
-
-        GUI.Label(new Rect(left + 15, 50, 300, 25),
-            $"Battery: {battery:F1} / {batteryCapacity:F1}");
-
-        GUI.Label(new Rect(left + 15, 80, 300, 25),
-            $"Total drain: {GetTotalDrain():F2} / s");
-
-        GUI.Label(new Rect(left + 15, 110, 300, 25),
-            $"Propulsion drain: {GetPropulsionDrain():F2} / s");
-
-        GUI.Label(new Rect(left + 15, 140, 300, 25),
-            $"Z - Sonar: {DeviceState(sonarSwitch)}");
-
-        GUI.Label(new Rect(left + 15, 170, 300, 25),
-            $"X - Pump: {DeviceState(pumpSwitch)}");
-
-        string status = !HasPower
-            ? "POWER LOST - PROPULSION DISABLED"
-            : battery <= batteryCapacity * 0.2f
-                ? "LOW BATTERY"
-                : "POWER NORMAL";
-
-        GUI.Label(new Rect(left + 15, 210, 300, 25), status);
     }
 }
