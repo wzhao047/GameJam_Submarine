@@ -3,7 +3,7 @@ using TMPro;
 
 public class SubmarineReadout : MonoBehaviour
 {
-    [Header("操纵台上的文字")]
+    [Header("驾驶台文字")]
     public TMP_Text navigationReadout;
 
     private SubmarineController controller;
@@ -24,17 +24,11 @@ public class SubmarineReadout : MonoBehaviour
 
     private void Start()
     {
-        if (controller == null ||
-            sonar == null ||
-            oxygen == null ||
-            power == null ||
+        if (controller == null || sonar == null ||
+            oxygen == null || power == null ||
             navigationReadout == null)
         {
-            Debug.LogError(
-                "请确认 Submarine 上的驾驶、声呐、氧气、供电组件，以及文字引用。",
-                this
-            );
-
+            Debug.LogError("请检查导航仪表的组件和文字引用。", this);
             enabled = false;
             return;
         }
@@ -46,8 +40,7 @@ public class SubmarineReadout : MonoBehaviour
     {
         refreshTimer += Time.deltaTime;
 
-        if (refreshTimer < RefreshInterval)
-            return;
+        if (refreshTimer < RefreshInterval) return;
 
         refreshTimer = 0f;
         RefreshReadout();
@@ -78,7 +71,6 @@ public class SubmarineReadout : MonoBehaviour
         else
         {
             float difference = sonar.ContactDepthDifference;
-
             string depthText;
 
             if (Mathf.Abs(difference) < 1f)
@@ -89,23 +81,19 @@ public class SubmarineReadout : MonoBehaviour
                 depthText = $"{-difference:F1} m ABOVE";
 
             contactText =
-                $"RANGE {sonar.ContactRange:F1} m\n" +
-                depthText;
+                $"RANGE {sonar.ContactRange:F1} m\n{depthText}";
         }
 
-        int totalSeconds = Mathf.CeilToInt(
-            oxygen.OxygenRemaining
-        );
+        int seconds = Mathf.CeilToInt(oxygen.OxygenRemaining);
 
         string oxygenText =
             $"O2 {oxygen.OxygenPercentage:F0}%  " +
-            $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
+            $"{seconds / 60:00}:{seconds % 60:00}";
 
         if (oxygen.OxygenPercentage <= 20f)
             oxygenText = Warning(oxygenText + " LOW");
 
-        string batteryText =
-            $"BAT {power.BatteryPercentage:F0}%";
+        string batteryText = $"BAT {power.BatteryPercentage:F0}%";
 
         if (!power.HasPower)
             batteryText = Warning("BAT EMPTY");
@@ -116,10 +104,6 @@ public class SubmarineReadout : MonoBehaviour
             ? "NO POWER"
             : power.SonarWorking ? "ON" : "OFF";
 
-        string pumpState = !power.HasPower
-            ? "NO POWER"
-            : power.PumpWorking ? "ON" : "OFF";
-
         navigationReadout.text =
             "NAVIGATION\n" +
             $"SPEED {controller.CurrentSpeed:F1} m/s  " +
@@ -129,7 +113,7 @@ public class SubmarineReadout : MonoBehaviour
             $"{contactText}\n\n" +
             $"{oxygenText}\n" +
             $"{batteryText}\n" +
-            $"SONAR {sonarState}  PUMP {pumpState}";
+            $"SONAR {sonarState}";
     }
 
     private string Warning(string text)
