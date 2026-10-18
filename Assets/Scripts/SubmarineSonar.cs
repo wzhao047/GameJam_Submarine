@@ -1,22 +1,58 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class SubmarineSonar : MonoBehaviour
 {
-    [Header("Screen / ÉùÄÅÆÁÄ»")]
+    [Header("å£°å‘å±å¹•")]
     public RawImage sonarScreen;
 
-    [Header("Ocean systems / º£ÓòÏµÍ³")]
+    [Header("æµ·æ´‹ç³»ç»Ÿ")]
     public RepairOceanDirector ocean;
     public FusePuzzleInteraction fuse;
 
-    [Header("Scanning / É¨Ãè")]
+    [Header("æ‰«æè®¾ç½®")]
     public float detectionRange = 200f;
     public float scanPeriod = 3f;
     public float echoDuration = 2.5f;
 
-    // ÔİÊ±±£Áô£¬±ÜÃâÔ­Åö×²½Å±¾³öÏÖ±àÒë´íÎó¡£
-    [Header("Legacy obstacle / ¾É°æÕÏ°­²ÎÊı")]
+    [Header("å¤§å‹ç¤ä½“å¤–è§‚")]
+    public Color reefFillColor =
+        new Color(0.35f, 0.025f, 0.015f);
+
+    public Color reefOutlineColor =
+        new Color(1f, 0.12f, 0.035f);
+
+    [Range(1f, 8f)]
+    public float reefOutlineWidth = 3f;
+
+    [Range(0f, 1f)]
+    public float reefFillOpacity = 0.6f;
+
+    [Header("é±¼ç¾¤å›æ³¢")]
+    public bool animateFishEchoes = true;
+
+    [Range(0f, 3f)]
+    public float fishTrailSeconds = 1.5f;
+
+    [Range(2, 12)]
+    public int fishTrailSamples = 8;
+
+    [Header("ç¤çŸ³æ·±åº¦é£é™©æ˜¾ç¤º")]
+    public bool fadeSafeObstacles = true;
+
+    [Tooltip("æ½œè‰‡ä¸éšœç¢æ·±åº¦é”™å¼€åï¼Œé¢å¤–ä¿ç•™çš„å®‰å…¨è·ç¦»")]
+    public float depthSafetyMargin = 3f;
+
+    [Tooltip("ç”±å±é™©äº®åº¦è¿‡æ¸¡åˆ°å®‰å…¨äº®åº¦æ‰€éœ€çš„æ·±åº¦è·ç¦»")]
+    public float depthFadeBand = 8f;
+
+    [Range(0f, 1f)]
+    public float safeObstacleBrightness = 0.12f;
+
+    [Tooltip("äº®åº¦å˜åŒ–é€Ÿåº¦ï¼Œè¶Šå¤§å˜åŒ–è¶Šå¿«")]
+    public float depthFadeSpeed = 2f;
+
+    [Header("æ—§ç‰ˆéšœç¢å‚æ•°ï¼šä¿ç•™å…¼å®¹")]
     public float obstacleLateral;
     public float obstacleForward = 160f;
     public float obstacleDepth = 100f;
@@ -24,6 +60,7 @@ public class SubmarineSonar : MonoBehaviour
 
     private SubmarineController controller;
     private SubmarinePower power;
+    private SubmarineHull hull;
 
     private const int Resolution = 192;
     private const float RefreshInterval = 0.05f;
@@ -52,30 +89,38 @@ public class SubmarineSonar : MonoBehaviour
     private class Echo
     {
         public RepairOceanContact source;
+
         public Vector3 sampledPosition;
+        public Vector3 sampledVelocity;
+
         public float sampledRadius;
         public float sampledTopDepth;
         public float sampledBottomDepth;
+
         public RepairContactKind kind;
+
         public float age = float.PositiveInfinity;
+        public float depthBrightness = 1f;
     }
 
     private void Awake()
     {
         controller = GetComponent<SubmarineController>();
         power = GetComponent<SubmarinePower>();
+        hull = GetComponent<SubmarineHull>();
 
         CreateScreen();
     }
 
     private void Start()
     {
-        if (sonarScreen == null || controller == null ||
-            power == null || ocean == null)
+        if (sonarScreen == null ||
+            controller == null ||
+            power == null ||
+            ocean == null)
         {
             Debug.LogError(
-                "Çë°ó¶¨ÉùÄÅÆÁÄ»ºÍ Ocean º£ÓòÉú³ÉÆ÷£¬" +
-                "²¢½«½Å±¾±£ÁôÔÚ Submarine ÉÏ¡£",
+                "è¯·å°†å£°å‘è„šæœ¬æŒ‚åˆ° Submarineï¼Œå¹¶è¿æ¥å±å¹•å’Œ Oceanã€‚",
                 this
             );
 
@@ -91,10 +136,8 @@ public class SubmarineSonar : MonoBehaviour
     private void CreateScreen()
     {
         screenTexture = new Texture2D(
-            Resolution,
-            Resolution,
-            TextureFormat.RGBA32,
-            false
+            Resolution, Resolution,
+            TextureFormat.RGBA32, false
         );
 
         screenTexture.name = "Runtime Multi Contact Sonar";
@@ -128,7 +171,8 @@ public class SubmarineSonar : MonoBehaviour
                     360f
                 );
 
-                Color color = new Color(0.008f, 0.018f, 0.014f);
+                Color color =
+                    new Color(0.008f, 0.018f, 0.014f);
 
                 if (distance <= 1f)
                 {
@@ -218,8 +262,10 @@ public class SubmarineSonar : MonoBehaviour
 
                 RepairOceanContact item = echo.source;
 
-                if (!working || item == null ||
-                    !item.isActiveAndEnabled || !item.Active)
+                if (!working ||
+                    item == null ||
+                    !item.isActiveAndEnabled ||
+                    !item.Active)
                 {
                     echo.age = float.PositiveInfinity;
                     continue;
@@ -234,7 +280,7 @@ public class SubmarineSonar : MonoBehaviour
 
                 float angle = Mathf.Repeat(
                     Mathf.Atan2(relative.x, relative.y)
-                    * Mathf.Rad2Deg,
+                        * Mathf.Rad2Deg,
                     360f
                 );
 
@@ -254,39 +300,61 @@ public class SubmarineSonar : MonoBehaviour
                 if (relative.sqrMagnitude <=
                     visibleRange * visibleRange && swept)
                 {
+                    bool firstEcho = float.IsPositiveInfinity(
+                        echo.age
+                    );
+
                     echo.sampledPosition = item.position;
+                    echo.sampledVelocity = item.velocity;
                     echo.sampledRadius = item.radius;
                     echo.sampledTopDepth = item.topDepth;
                     echo.sampledBottomDepth = item.bottomDepth;
                     echo.kind = item.kind;
                     echo.age = 0f;
+
+                    if (firstEcho)
+                        echo.depthBrightness = GetDepthBrightness(echo);
                 }
 
                 if (echo.age >= Mathf.Max(0.1f, echoDuration))
                     continue;
 
-                Vector2 sampledOffset = new Vector2(
-                    echo.sampledPosition.x,
-                    echo.sampledPosition.z
+                echo.depthBrightness = Mathf.MoveTowards(
+                    echo.depthBrightness,
+                    GetDepthBrightness(echo),
+                    Mathf.Max(0.01f, depthFadeSpeed) * dt
+                );
+
+                Vector3 contactPosition =
+                    GetEchoPosition(echo, 0f);
+
+                Vector2 contactOffset = new Vector2(
+                    contactPosition.x,
+                    contactPosition.z
                 ) - controller.NavigationPosition;
 
                 float depthDifference =
-                    echo.sampledPosition.y - controller.Depth;
+                    contactPosition.y - controller.Depth;
 
-                // ´óĞÍ½¸Ê¯¶ÁÈ¡Æä´¹Ö±·¶Î§£¬
-                // ±ÜÃâ°ÑÉîÂñº£µ×µÄÖĞĞÄÎóµ±³É°²È«¾àÀë¡£
                 if (echo.kind == RepairContactKind.Reef)
                 {
-                    depthDifference =
-                        Mathf.Clamp(
-                            controller.Depth,
-                            echo.sampledTopDepth,
-                            echo.sampledBottomDepth
-                        ) - controller.Depth;
+                    float top = Mathf.Min(
+                        echo.sampledTopDepth,
+                        echo.sampledBottomDepth
+                    );
+
+                    float bottom = Mathf.Max(
+                        echo.sampledTopDepth,
+                        echo.sampledBottomDepth
+                    );
+
+                    depthDifference = Mathf.Clamp(
+                        controller.Depth, top, bottom
+                    ) - controller.Depth;
                 }
 
                 float distance = Mathf.Sqrt(
-                    sampledOffset.sqrMagnitude +
+                    contactOffset.sqrMagnitude +
                     depthDifference * depthDifference
                 );
 
@@ -312,6 +380,68 @@ public class SubmarineSonar : MonoBehaviour
         lastWorking = working;
     }
 
+    private float GetDepthBrightness(Echo echo)
+    {
+        if (!fadeSafeObstacles ||
+            echo.kind == RepairContactKind.Fish)
+        {
+            return 1f;
+        }
+
+        float boatRadius = hull != null
+            ? Mathf.Max(0f, hull.submarineRadius)
+            : 3f;
+
+        float padding =
+            boatRadius + Mathf.Max(0f, depthSafetyMargin);
+
+        float unsafeTop;
+        float unsafeBottom;
+
+        if (echo.kind == RepairContactKind.Reef)
+        {
+            // å¤§å‹ç¤ä½“ä½¿ç”¨ä»é¡¶éƒ¨åˆ°æµ·åº•çš„æ·±åº¦èŒƒå›´ã€‚
+            unsafeTop = Mathf.Min(
+                echo.sampledTopDepth,
+                echo.sampledBottomDepth
+            ) - padding;
+
+            unsafeBottom = Mathf.Max(
+                echo.sampledTopDepth,
+                echo.sampledBottomDepth
+            ) + padding;
+        }
+        else
+        {
+            // æ™®é€šçŸ³å—ä½¿ç”¨ä¸­å¿ƒæ·±åº¦å’Œçƒå½¢åŠå¾„ã€‚
+            float radius = Mathf.Max(0f, echo.sampledRadius);
+
+            unsafeTop =
+                echo.sampledPosition.y - radius - padding;
+
+            unsafeBottom =
+                echo.sampledPosition.y + radius + padding;
+        }
+
+        float depth = controller.Depth;
+
+        float clearance = Mathf.Max(
+            unsafeTop - depth,
+            depth - unsafeBottom,
+            0f
+        );
+
+        float safety = Mathf.Clamp01(
+            clearance / Mathf.Max(0.1f, depthFadeBand)
+        );
+
+        return Mathf.Lerp(
+            1f,
+            Mathf.Clamp01(safeObstacleBrightness),
+            safety
+        );
+    }
+
     private Vector2 ToLocal(Vector2 offset)
     {
         float radians = controller.Heading * Mathf.Deg2Rad;
@@ -319,9 +449,29 @@ public class SubmarineSonar : MonoBehaviour
         return new Vector2(
             offset.x * Mathf.Cos(radians)
                 - offset.y * Mathf.Sin(radians),
+
             offset.x * Mathf.Sin(radians)
                 + offset.y * Mathf.Cos(radians)
         );
+    }
+
+    private Vector3 GetEchoPosition(
+        Echo echo,
+        float historySeconds)
+    {
+        Vector3 position = echo.sampledPosition;
+
+        if (animateFishEchoes &&
+            echo.kind == RepairContactKind.Fish)
+        {
+            float predictionTime = Mathf.Max(
+                0f, echo.age - historySeconds
+            );
+
+            position += echo.sampledVelocity * predictionTime;
+        }
+
+        return position;
     }
 
     private void RenderScreen(bool working)
@@ -339,8 +489,7 @@ public class SubmarineSonar : MonoBehaviour
             if (pixelRadii[i] <= 1f)
             {
                 float behind = Mathf.Repeat(
-                    scanAngle - pixelAngles[i],
-                    360f
+                    scanAngle - pixelAngles[i], 360f
                 );
 
                 if (behind < 40f)
@@ -361,7 +510,6 @@ public class SubmarineSonar : MonoBehaviour
 
         if (working && echoes != null)
         {
-            // ÏÈ»­´óĞÍÇøÓò£¬ÔÙ»­Ğ¡Ä¿±ê£¬±ÜÃâÏà»¥ÕÚµ²¡£
             foreach (Echo echo in echoes)
             {
                 if (echo.kind == RepairContactKind.Reef)
@@ -370,40 +518,88 @@ public class SubmarineSonar : MonoBehaviour
 
             foreach (Echo echo in echoes)
             {
-                if (echo.kind != RepairContactKind.Reef)
-                    DrawEcho(echo);
+                if (echo.kind == RepairContactKind.Reef)
+                    continue;
+
+                if (animateFishEchoes &&
+                    echo.kind == RepairContactKind.Fish &&
+                    echo.age < Mathf.Max(0.1f, echoDuration))
+                {
+                    DrawFishTrail(echo);
+                }
+
+                DrawEcho(echo);
             }
         }
 
         if (working)
-        {
-            int center = Resolution / 2;
-
-            for (int y = center - 2; y <= center + 3; y++)
-            {
-                int width = y > center ? 1 : 2;
-
-                for (int x = center - width;
-                    x <= center + width; x++)
-                {
-                    pixels[y * Resolution + x] =
-                        new Color(0.5f, 1f, 0.65f);
-                }
-            }
-        }
+            DrawSubmarineMarker();
 
         screenTexture.SetPixels32(pixels);
         screenTexture.Apply(false, false);
     }
 
-    private void DrawEcho(Echo echo)
+    private void DrawFishTrail(Echo echo)
     {
-        if (echo.source == null || !echo.source.Active)
+        int samples = Mathf.Clamp(fishTrailSamples, 2, 12);
+
+        float history = Mathf.Min(
+            Mathf.Max(0f, fishTrailSeconds), echo.age
+        );
+
+        if (history <= 0.01f)
             return;
+
+        for (int step = samples; step >= 1; step--)
+        {
+            float fraction = step / (float)samples;
+
+            DrawEcho(
+                echo,
+                history * fraction,
+                0.22f * (1f - fraction * 0.8f),
+                0.65f
+            );
+        }
+    }
+
+    private void DrawSubmarineMarker()
+    {
+        int center = Resolution / 2;
+
+        for (int y = center - 2; y <= center + 3; y++)
+        {
+            int width = y > center ? 1 : 2;
+
+            for (int x = center - width;
+                x <= center + width;
+                x++)
+            {
+                pixels[y * Resolution + x] =
+                    new Color(0.5f, 1f, 0.65f);
+            }
+        }
+    }
+
+    private void DrawEcho(
+        Echo echo,
+        float historySeconds = 0f,
+        float opacity = 1f,
+        float sizeScale = 1f)
+    {
+        if (echo.source == null ||
+            !echo.source.isActiveAndEnabled ||
+            !echo.source.Active)
+        {
+            return;
+        }
 
         float brightness = Mathf.Clamp01(
             1f - echo.age / Mathf.Max(0.1f, echoDuration)
         );
+
+        brightness *=
+            Mathf.Clamp01(opacity) * echo.depthBrightness;
 
         if (brightness <= 0f)
             return;
@@ -412,9 +608,12 @@ public class SubmarineSonar : MonoBehaviour
         float center = (Resolution - 1) * 0.5f;
         float radarRadius = center - 2f;
 
+        Vector3 displayPosition =
+            GetEchoPosition(echo, historySeconds);
+
         Vector2 offset = new Vector2(
-            echo.sampledPosition.x,
-            echo.sampledPosition.z
+            displayPosition.x,
+            displayPosition.z
         ) - controller.NavigationPosition;
 
         Vector2 relative = ToLocal(offset) / range;
@@ -424,12 +623,12 @@ public class SubmarineSonar : MonoBehaviour
         float normalizedSize = reef
             ? Mathf.Max(0.025f, echo.sampledRadius / range)
             : Mathf.Clamp(
-                echo.sampledRadius / range,
-                0.025f,
-                0.08f
+                echo.sampledRadius / range, 0.025f, 0.08f
             );
 
-        float size = normalizedSize * radarRadius;
+        float size =
+            normalizedSize * radarRadius *
+            Mathf.Max(0.1f, sizeScale);
 
         Vector2 screenPosition = new Vector2(
             center + relative.x * radarRadius,
@@ -454,11 +653,9 @@ public class SubmarineSonar : MonoBehaviour
             Mathf.CeilToInt(screenPosition.y + size)
         );
 
-        Color tint = reef
-            ? new Color(1f, 0.45f, 0.08f)
-            : echo.kind == RepairContactKind.Fish
-                ? new Color(0.65f, 1f, 0.55f)
-                : new Color(0.15f, 0.7f, 0.3f);
+        Color tint = echo.kind == RepairContactKind.Fish
+            ? new Color(0.65f, 1f, 0.55f)
+            : new Color(0.15f, 0.7f, 0.3f);
 
         for (int y = minimumY; y <= maximumY; y++)
         {
@@ -470,18 +667,46 @@ public class SubmarineSonar : MonoBehaviour
                     continue;
 
                 float distance = Vector2.Distance(
-                    new Vector2(x, y),
-                    screenPosition
+                    new Vector2(x, y), screenPosition
                 );
 
-                float glow = reef
-                    ? Mathf.Clamp01((size - distance) / 2f)
-                    : Mathf.Clamp01(1f - distance / size);
+                if (distance > size)
+                    continue;
 
                 Color color = pixels[index];
-                color += tint * glow * brightness;
-                color.a = 1f;
 
+                if (reef)
+                {
+                    float coverage = Mathf.Clamp01(
+                        size - distance
+                    );
+
+                    float fill =
+                        Mathf.Clamp01(reefFillOpacity) *
+                        coverage * brightness;
+
+                    color = Color.Lerp(
+                        color, reefFillColor, fill
+                    );
+
+                    float edge = Mathf.Clamp01(
+                        distance -
+                        (size - Mathf.Max(1f, reefOutlineWidth))
+                    ) * coverage;
+
+                    color +=
+                        reefOutlineColor * edge * brightness;
+                }
+                else
+                {
+                    float glow = Mathf.Clamp01(
+                        1f - distance / size
+                    );
+
+                    color += tint * glow * brightness;
+                }
+
+                color.a = 1f;
                 pixels[index] = color;
             }
         }

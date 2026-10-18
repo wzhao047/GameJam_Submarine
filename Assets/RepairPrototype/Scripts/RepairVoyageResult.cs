@@ -4,21 +4,27 @@ using TMPro;
 [DefaultExecutionOrder(1000)]
 public class RepairVoyageResult : MonoBehaviour
 {
-    [Header("Navigation systems / 航行系统")]
+    [Header("航行系统")]
     public SubmarineController controller;
     public SubmarineOxygen oxygen;
     public SubmarinePower power;
     public Camera playerCamera;
 
-    [Header("Repair systems / 维修系统")]
+    [Header("维修系统")]
     public RepairVoyageRecord record;
     public RepairFaultDirector director;
 
-    [Header("Destination distance / 终点前进距离")]
-    [Min(1f)]
-    public float destinationForwardDistance = 1500f;
+    [Header("声呐上的终点标记")]
+    public SubmarineGoalMarker goalMarker;
 
-    [Header("Result interface / 结算界面")]
+    [Header("到达条件")]
+    [Min(1f)]
+    public float arrivalRadius = 20f;
+
+    [Min(0.1f)]
+    public float arrivalDepthTolerance = 10f;
+
+    [Header("结算界面")]
     public GameObject resultPanel;
     public TMP_Text resultText;
 
@@ -28,14 +34,36 @@ public class RepairVoyageResult : MonoBehaviour
 
     private void Start()
     {
-        if (controller == null || oxygen == null || power == null ||
-            record == null || director == null ||
-            resultPanel == null || resultText == null ||
-            record.flood == null || record.temperature == null ||
-            record.leak == null || record.cooling == null ||
+        if (controller == null ||
+            oxygen == null ||
+            power == null ||
+            record == null ||
+            director == null ||
+            goalMarker == null ||
+            resultPanel == null ||
+            resultText == null)
+        {
+            SetupError();
+            return;
+        }
+
+        if (record.flood == null ||
+            record.temperature == null ||
+            record.leak == null ||
+            record.cooling == null ||
             record.fuse == null)
         {
-            Debug.LogError("请补齐航行结算和维修记录的引用。", this);
+            SetupError();
+            return;
+        }
+
+        if (goalMarker.controller != controller)
+        {
+            Debug.LogError(
+                "终点标记和结算必须引用同一个 SubmarineController。",
+                this
+            );
+
             enabled = false;
             return;
         }
@@ -44,12 +72,7 @@ public class RepairVoyageResult : MonoBehaviour
 
         if (hull == null)
         {
-            Debug.LogError(
-                "Controller 对应的对象上找不到 SubmarineHull。",
-                this
-            );
-
-            enabled = false;
+            SetupError();
             return;
         }
 
@@ -60,12 +83,22 @@ public class RepairVoyageResult : MonoBehaviour
         resultPanel.SetActive(false);
     }
 
+    private void SetupError()
+    {
+        Debug.LogError(
+            "请检查 RepairVoyageResult 的航行、维修、终点和界面引用。",
+            this
+        );
+
+        enabled = false;
+    }
+
     private void LateUpdate()
     {
         if (ended)
             return;
 
-        // 同时发生损毁与抵达时，优先判断失败。
+        // 同一帧到达与失败同时发生时，优先判定失败。
         if (hull.HasFailed)
         {
             EndVoyage(false, "HULL DESTROYED - THREE COLLISIONS");
@@ -78,12 +111,32 @@ public class RepairVoyageResult : MonoBehaviour
         {
             EndVoyage(false, "FLOODING LIMIT REACHED");
         }
-        else if (
-            controller.NavigationPosition.y >=
-            Mathf.Max(1f, destinationForwardDistance))
+        else if (HasArrived())
         {
             EndVoyage(true, "DESTINATION REACHED");
         }
+    }
+
+    private bool HasArrived()
+    {
+        Vector3 goal = goalMarker.GoalPosition;
+        Vector2 position = controller.NavigationPosition;
+
+        Vector2 horizontalOffset = new Vector2(
+            goal.x - position.x,
+            goal.z - position.y
+        );
+
+        float radius = Mathf.Max(1f, arrivalRadius);
+
+        bool horizontallyClose =
+            horizontalOffset.sqrMagnitude <= radius * radius;
+
+        bool depthCorrect =
+            Mathf.Abs(goal.y - controller.Depth)
+            <= Mathf.Max(0.1f, arrivalDepthTolerance);
+
+        return horizontallyClose && depthCorrect;
     }
 
     private void EndVoyage(bool success, string cause)
@@ -112,14 +165,12 @@ public class RepairVoyageResult : MonoBehaviour
             report +
             "\n\nClick Restart to begin a new voyage.";
 
-        // 停止航行、资源消耗和故障生成。
         StopScript(director);
         StopScript(controller);
         StopScript(power);
         StopScript(oxygen);
         StopScript(hull);
 
-        // 停止维修交互与环境变化。
         StopScript(record.leak);
         StopScript(record.cooling);
         StopScript(record.fuse);
@@ -135,7 +186,6 @@ public class RepairVoyageResult : MonoBehaviour
 
         StopScript(record);
 
-        // 停止视角切换。
         if (playerCamera != null)
         {
             StopScript(
