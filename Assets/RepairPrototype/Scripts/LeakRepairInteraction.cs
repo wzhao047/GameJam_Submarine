@@ -7,6 +7,9 @@ using UnityEngine.InputSystem;
 
 public class LeakRepairInteraction : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("Íæ¼ÒÏà»ú")]
     public Camera playerCamera;
 
@@ -195,6 +198,8 @@ public class LeakRepairInteraction : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         float width = Mathf.Min(580f, Screen.width - 20f);
         float top = Mathf.Max(10f, Screen.height - 165f);
 

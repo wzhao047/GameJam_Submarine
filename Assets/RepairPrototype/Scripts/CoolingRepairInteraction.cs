@@ -7,6 +7,9 @@ using UnityEngine.InputSystem;
 
 public class CoolingRepairInteraction : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("Íæ¼ÒÏà»ú")]
     public Camera playerCamera;
 
@@ -173,6 +176,8 @@ public class CoolingRepairInteraction : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         float width = Mathf.Min(440f, Screen.width - 20f);
 
         GUILayout.BeginArea(

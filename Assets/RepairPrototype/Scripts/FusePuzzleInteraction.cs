@@ -7,6 +7,9 @@ using UnityEngine.InputSystem;
 
 public class FusePuzzleInteraction : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("Íæ¼ÒÏà»ú")]
     public Camera playerCamera;
 
@@ -308,6 +311,8 @@ public class FusePuzzleInteraction : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         float left = Mathf.Max(10f, Screen.width * 0.5f - 220f);
 
         GUI.Box(

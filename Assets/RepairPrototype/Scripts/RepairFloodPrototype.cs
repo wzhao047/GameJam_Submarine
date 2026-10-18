@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class RepairFloodPrototype : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("Â©Ë®Î¬ÐÞÂß¼­")]
     public LeakRepairInteraction repair;
 
@@ -30,6 +33,8 @@ public class RepairFloodPrototype : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         float width = Mathf.Min(330f, Screen.width - 20f);
         float left = Screen.width - width - 10f;
 

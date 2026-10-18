@@ -7,6 +7,9 @@ using UnityEngine.InputSystem;
 
 public class RepairSharedToolbox : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("Íæ¼ÒÏà»ú")]
     public Camera playerCamera;
 
@@ -67,6 +70,8 @@ public class RepairSharedToolbox : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         GUI.Box(
             new Rect(10f, 180f, 330f, 55f),
             HasTools

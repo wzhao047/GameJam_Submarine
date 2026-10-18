@@ -6,6 +6,9 @@ using UnityEngine.InputSystem;
 
 public class SubmarineController : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("当前视角控制器")]
     public RepairStationView stationView;
 
@@ -238,6 +241,8 @@ public class SubmarineController : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         GUI.Box(new Rect(20, 20, 380, 330), "NAVIGATION");
 
         GUI.Label(new Rect(35, 50, 350, 25),

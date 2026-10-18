@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class RepairCoolingPrototype : MonoBehaviour
 {
+    [Header("Debug UI")]
+    public bool showDebugUI = false;
+
     [Header("温度，单位：摄氏度")]
     public float startingTemperature = 40f;
     public float normalTemperature = 40f;
@@ -60,6 +63,8 @@ public class RepairCoolingPrototype : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!showDebugUI) return;
+
         float width = Mathf.Min(330f, Screen.width - 20f);
         float left = Screen.width - width - 10f;
 
