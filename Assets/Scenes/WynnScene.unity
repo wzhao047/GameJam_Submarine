@@ -326,6 +326,7 @@ MonoBehaviour:
   destination: {x: 1300, y: -500, z: -0.000013113417}
   age: 0
   spawnDepth: 500
+  requiredReefRise: 0
 --- !u!23 &49414932
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -816,6 +817,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VoyageResources
   movement: {fileID: 1031906613}
+  hullIntegrity: {fileID: 1031906619}
   batteryCapacity: 100
   oxygenDuration: 600
   baseDrain: 0.01
@@ -830,6 +832,7 @@ MonoBehaviour:
   oxygen: 600
   failed: 0
   won: 0
+  failureReason:
 --- !u!4 &88216731
 Transform:
   m_ObjectHideFlags: 0
@@ -1161,6 +1164,7 @@ MonoBehaviour:
   destination: {x: 1042.3367, y: -97.75591, z: 49.983376}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!65 &124719329
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2395,6 +2399,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &314354977
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3225,6 +3230,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &423022596
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3853,6 +3859,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &517113150
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5666,6 +5673,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &664767752
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6304,6 +6312,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SonarScreen
   movement: {fileID: 1031906613}
   resources: {fileID: 88216730}
+  hullIntegrity: {fileID: 1031906619}
   ocean: {fileID: 1188242110}
   sonarCamera: {fileID: 1735682767}
   grid: {fileID: 620999323}
@@ -6334,6 +6343,7 @@ Transform:
   - {fileID: 711661779}
   - {fileID: 940889860}
   - {fileID: 1637014903}
+  - {fileID: 1305768145}
   m_Father: {fileID: 2079887682}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &732121506
@@ -7119,6 +7129,7 @@ MonoBehaviour:
   destination: {x: 1054.8582, y: -103.74482, z: -25.832962}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!65 &882589839
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -7412,7 +7423,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 940889859}
-  m_Text: 'RED: OBSTACLES / BLUE: RISE 20m / YELLOW: GOAL'
+  m_Text: 'DARK RED: SOLID / BRIGHT RED: FISH / YELLOW: GOAL'
   m_OffsetZ: 0
   m_CharacterSize: 0.011
   m_LineSpacing: 1
@@ -7757,6 +7768,7 @@ GameObject:
   - component: {fileID: 1031906613}
   - component: {fileID: 1031906618}
   - component: {fileID: 1031906617}
+  - component: {fileID: 1031906619}
   m_Layer: 0
   m_Name: Submarine_Movement
   m_TagString: Untagged
@@ -7807,6 +7819,7 @@ MonoBehaviour:
   collisionCount: 0
   contact: 0
   lastObstacle: 
+  lastImpactSpeed: 0
 --- !u!4 &1031906616
 Transform:
   m_ObjectHideFlags: 0
@@ -7871,6 +7884,30 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 80
   m_CollisionDetection: 0
+--- !u!114 &1031906619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1031906612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e78bd032c7464cc19678ac76bc5b13ff, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::HullIntegrity
+  movement: {fileID: 1031906613}
+  resources: {fileID: 88216730}
+  shakeCamera: {fileID: 645387607}
+  hullStatus: {fileID: 1305768143}
+  maximumHull: 100
+  baseCollisionDamage: 10
+  damagePerSpeed: 4
+  shakeDuration: 0.45
+  shakeStrength: 0.035
+  shakeFrequency: 28
+  hull: 100
+  lastDamage: 0
 --- !u!1 &1032634088
 GameObject:
   m_ObjectHideFlags: 0
@@ -8024,6 +8061,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1034280043
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9135,6 +9173,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1131011293
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9561,6 +9600,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1165940522
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9990,6 +10030,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1198726707
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -11252,6 +11293,110 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1301143025}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1305768142
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1305768145}
+  - component: {fileID: 1305768144}
+  - component: {fileID: 1305768143}
+  m_Layer: 0
+  m_Name: Hull_Status
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!102 &1305768143
+TextMesh:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1305768142}
+  m_Text: HULL 100%
+  m_OffsetZ: 0
+  m_CharacterSize: 0.01
+  m_LineSpacing: 1
+  m_Anchor: 2
+  m_Alignment: 2
+  m_TabSize: 4
+  m_FontSize: 48
+  m_FontStyle: 0
+  m_RichText: 1
+  m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Color:
+    serializedVersion: 2
+    rgba: 4289134464
+--- !u!23 &1305768144
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1305768142}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10100, guid: 0000000000000000e000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!4 &1305768145
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1305768142}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.81, y: 0.495, z: -0.015}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 730601797}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1330024330
 GameObject:
   m_ObjectHideFlags: 0
@@ -11383,6 +11528,7 @@ MonoBehaviour:
   destination: {x: 1094.2322, y: -100, z: -33.47073}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!65 &1346115149
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -11528,8 +11674,8 @@ MonoBehaviour:
   visible: 1
   contacts: {fileID: 1365935477}
   dotRadius: 0.018
-  color: {r: 1, g: 0.025, b: 0.015, a: 1}
-  giantReefColor: {r: 0.04, g: 0.3, b: 1, a: 1}
+  color: {r: 0.45, g: 0.012, b: 0.008, a: 1}
+  fishSchoolColor: {r: 1, g: 0.04, b: 0.025, a: 1}
   goalColor: {r: 1, g: 0.85, b: 0.04, a: 1}
 --- !u!114 &1365935477
 MonoBehaviour:
@@ -11564,8 +11710,11 @@ MonoBehaviour:
   - {fileID: 423022595}
   - {fileID: 49414931}
   detectionRadius: 100
-  previewAllContacts: 1
-  visibleEchoes: 6
+  scanAnimation: {fileID: 2054738033}
+  echoFadeDuration: 2
+  visibleEchoes: 0
+  scanElapsed: 0
+  sampledHeading: 0
 --- !u!23 &1365935478
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -13439,6 +13588,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1648153682
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -15535,6 +15685,7 @@ MonoBehaviour:
   destination: {x: 1094.2524, y: -293.01, z: 11.89459}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!65 &1883548612
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -16119,6 +16270,7 @@ MonoBehaviour:
   destination: {x: 1056.1139, y: -102.65411, z: 64.44328}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!65 &1914053547
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -16635,6 +16787,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &1975519639
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -17465,6 +17618,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!65 &2026016084
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -17884,7 +18038,7 @@ MonoBehaviour:
   sonar: {fileID: 730601796}
   surface: {fileID: 2054738034}
   visible: 1
-  sweepDuration: 4
+  sweepDuration: 2
   clockwise: 1
   trailDegrees: 40
   previewAngle: 35

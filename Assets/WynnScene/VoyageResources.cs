@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 public class VoyageResources : MonoBehaviour
 {
     public SubmarineMovement movement;
+    public HullIntegrity hullIntegrity;
     [Header("Resource budgets")]
     [Min(0f)] public float batteryCapacity = 100f;
     [Min(0f)] public float oxygenDuration = 600f;
@@ -26,10 +27,12 @@ public class VoyageResources : MonoBehaviour
     [SerializeField] private float oxygen;
     [SerializeField] private bool failed;
     [SerializeField] private bool won;
+    [SerializeField] private string failureReason;
     public bool HasPower => battery > 0f;
     public bool SonarWorking => HasPower && sonarSwitch;
     public bool Failed => failed;
     public bool Won => won;
+    public string FailureReason => failureReason;
     public float Battery => battery;
     public float Oxygen => oxygen;
     public float Drain { get; private set; }
@@ -43,12 +46,25 @@ public class VoyageResources : MonoBehaviour
         oxygen = Mathf.Max(0f, oxygenDuration);
         failed = oxygen <= 0f;
         won = false;
+        failureReason = failed ? "Oxygen depleted." : "";
+        if(hullIntegrity!=null) hullIntegrity.ResetHull();
+        if(failed && movement!=null) movement.StopMotion();
+    }
+
+    public bool FailVoyage(string reason)
+    {
+        if(won || failed) return false;
+        failed=true;
+        failureReason=reason;
+        if(movement!=null) movement.StopMotion();
+        return true;
     }
 
     public bool CompleteVoyage()
     {
         if(failed || oxygen<=0f) return false;
         won=true;
+        if(movement!=null) movement.StopMotion();
         return true;
     }
 
@@ -74,6 +90,6 @@ public class VoyageResources : MonoBehaviour
         if (failed || won || freezeResources) return;
         battery = Mathf.Max(0f, battery - Drain * Time.deltaTime);
         oxygen = Mathf.Max(0f, oxygen - Time.deltaTime);
-        failed = oxygen <= 0f;
+        if(oxygen<=0f) FailVoyage("Oxygen depleted.");
     }
 }

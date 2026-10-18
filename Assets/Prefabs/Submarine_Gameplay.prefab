@@ -2405,6 +2405,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VoyageResources
   movement: {fileID: 5515768443423134637}
+  hullIntegrity: {fileID: 5479640096352376245}
   batteryCapacity: 100
   oxygenDuration: 600
   baseDrain: 0.01
@@ -2419,6 +2420,7 @@ MonoBehaviour:
   oxygen: 600
   failed: 0
   won: 0
+  failureReason:
 --- !u!1 &1030000640473658930
 GameObject:
   m_ObjectHideFlags: 0
@@ -3413,7 +3415,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1440635232668835419}
-  m_Text: 'RED: OBSTACLES / BLUE: RISE 20m / YELLOW: GOAL'
+  m_Text: 'DARK RED: SOLID / BRIGHT RED: FISH / YELLOW: GOAL'
   m_OffsetZ: 0
   m_CharacterSize: 0.011
   m_LineSpacing: 1
@@ -4325,6 +4327,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &2055898167904767927
 GameObject:
   m_ObjectHideFlags: 0
@@ -4998,6 +5001,7 @@ Transform:
   - {fileID: 4465795125678865315}
   - {fileID: 7895009836173452181}
   - {fileID: 7711506506770527958}
+  - {fileID: 178552029243049010}
   m_Father: {fileID: 1340475408392992835}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2064153937829146728
@@ -5014,6 +5018,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SonarScreen
   movement: {fileID: 5515768443423134637}
   resources: {fileID: 1869519997508161267}
+  hullIntegrity: {fileID: 5479640096352376245}
   ocean: {fileID: 5509120852789233820}
   sonarCamera: {fileID: 164548775651339970}
   grid: {fileID: 8762976990753223587}
@@ -5384,6 +5389,7 @@ MonoBehaviour:
   destination: {x: 1054.8582, y: -103.74482, z: -25.832962}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!1 &2651922534218139329
 GameObject:
   m_ObjectHideFlags: 0
@@ -6776,6 +6782,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &3636481258119558570
 GameObject:
   m_ObjectHideFlags: 0
@@ -7584,6 +7591,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &3765765402131103133
 GameObject:
   m_ObjectHideFlags: 0
@@ -7718,6 +7726,7 @@ MonoBehaviour:
   destination: {x: 1056.1139, y: -102.65411, z: 64.44328}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!1 &3801416401376356483
 GameObject:
   m_ObjectHideFlags: 0
@@ -8203,8 +8212,11 @@ MonoBehaviour:
   - {fileID: 5919276299700331233}
   - {fileID: 6217198786333872441}
   detectionRadius: 100
-  previewAllContacts: 1
+  scanAnimation: {fileID: 2646154851455896058}
+  echoFadeDuration: 2
   visibleEchoes: 0
+  scanElapsed: 0
+  sampledHeading: 0
 --- !u!114 &4242872868634721370
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8222,8 +8234,8 @@ MonoBehaviour:
   visible: 1
   contacts: {fileID: 1989719705939445641}
   dotRadius: 0.018
-  color: {r: 1, g: 0.025, b: 0.015, a: 1}
-  giantReefColor: {r: 0.04, g: 0.3, b: 1, a: 1}
+  color: {r: 0.45, g: 0.012, b: 0.008, a: 1}
+  fishSchoolColor: {r: 1, g: 0.04, b: 0.025, a: 1}
   goalColor: {r: 1, g: 0.85, b: 0.04, a: 1}
 --- !u!1 &4177787608027076869
 GameObject:
@@ -9281,6 +9293,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &4766788351085791205
 GameObject:
   m_ObjectHideFlags: 0
@@ -10282,7 +10295,7 @@ MonoBehaviour:
   sonar: {fileID: 2064153937829146728}
   surface: {fileID: 8853841812543168144}
   visible: 1
-  sweepDuration: 4
+  sweepDuration: 2
   clockwise: 1
   trailDegrees: 40
   previewAngle: 35
@@ -10512,6 +10525,110 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.99999994, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &5352917408409651716
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 178552029243049010}
+  - component: {fileID: 7326525239947832952}
+  - component: {fileID: 1003246529709112956}
+  m_Layer: 0
+  m_Name: Hull_Status
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &178552029243049010
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5352917408409651716}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.81, y: 0.495, z: -0.015}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6448853570727935595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &7326525239947832952
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5352917408409651716}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10100, guid: 0000000000000000e000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!102 &1003246529709112956
+TextMesh:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5352917408409651716}
+  m_Text: HULL 100%
+  m_OffsetZ: 0
+  m_CharacterSize: 0.01
+  m_LineSpacing: 1
+  m_Anchor: 2
+  m_Alignment: 2
+  m_TabSize: 4
+  m_FontSize: 48
+  m_FontStyle: 0
+  m_RichText: 1
+  m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Color:
+    serializedVersion: 2
+    rgba: 4289134464
 --- !u!1 &5492600775979670503
 GameObject:
   m_ObjectHideFlags: 0
@@ -10646,6 +10763,7 @@ MonoBehaviour:
   destination: {x: 1094.2524, y: -293.01, z: 11.89459}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!1 &5512330158219452044
 GameObject:
   m_ObjectHideFlags: 0
@@ -11292,6 +11410,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &5835681687101388602
 GameObject:
   m_ObjectHideFlags: 0
@@ -11516,6 +11635,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &5869539571326508597
 GameObject:
   m_ObjectHideFlags: 0
@@ -11964,6 +12084,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &5985776995423097607
 GameObject:
   m_ObjectHideFlags: 0
@@ -12300,6 +12421,7 @@ MonoBehaviour:
   destination: {x: 1094.2322, y: -100, z: -33.47073}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!1 &6341291045769989495
 GameObject:
   m_ObjectHideFlags: 0
@@ -12906,6 +13028,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &6809708378452853209
 GameObject:
   m_ObjectHideFlags: 0
@@ -12918,6 +13041,7 @@ GameObject:
   - component: {fileID: 5515768443423134637}
   - component: {fileID: 619509917674139781}
   - component: {fileID: 8270266989107353356}
+  - component: {fileID: 5479640096352376245}
   m_Layer: 0
   m_Name: Submarine_Movement
   m_TagString: Untagged
@@ -12984,6 +13108,7 @@ MonoBehaviour:
   collisionCount: 0
   contact: 0
   lastObstacle: 
+  lastImpactSpeed: 0
 --- !u!54 &619509917674139781
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -13032,6 +13157,30 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 5, y: 2, z: 2}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5479640096352376245
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6809708378452853209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e78bd032c7464cc19678ac76bc5b13ff, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::HullIntegrity
+  movement: {fileID: 5515768443423134637}
+  resources: {fileID: 1869519997508161267}
+  shakeCamera: {fileID: 7433052574011111019}
+  hullStatus: {fileID: 1003246529709112956}
+  maximumHull: 100
+  baseCollisionDamage: 10
+  damagePerSpeed: 4
+  shakeDuration: 0.45
+  shakeStrength: 0.035
+  shakeFrequency: 28
+  hull: 100
+  lastDamage: 0
 --- !u!1 &6827557784927905723
 GameObject:
   m_ObjectHideFlags: 0
@@ -13295,6 +13444,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &6908813069184189711
 GameObject:
   m_ObjectHideFlags: 0
@@ -14013,6 +14163,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &7319016892009540299
 GameObject:
   m_ObjectHideFlags: 0
@@ -15509,6 +15660,7 @@ MonoBehaviour:
   destination: {x: 1042.3367, y: -97.75591, z: 49.983376}
   age: 0
   spawnDepth: 100
+  requiredReefRise: 0
 --- !u!1 &8137782879805503309
 GameObject:
   m_ObjectHideFlags: 0
@@ -15643,6 +15795,7 @@ MonoBehaviour:
   destination: {x: 0, y: 0, z: 0}
   age: 0
   spawnDepth: 0
+  requiredReefRise: 0
 --- !u!1 &8157782178113176465
 GameObject:
   m_ObjectHideFlags: 0
@@ -17618,6 +17771,7 @@ MonoBehaviour:
   destination: {x: 1300, y: -500, z: -0.000013113417}
   age: 0
   spawnDepth: 500
+  requiredReefRise: 0
 --- !u!1 &9070874477660192069
 GameObject:
   m_ObjectHideFlags: 0

@@ -66,7 +66,7 @@ public class OceanSystem : MonoBehaviour
         SyncSeabed();
         elapsed=0f; goalApproachStartDistance=0f; won=goalApproaching=false;
         fixedTimer=fixedSpawnInterval; fishTimer=fishSpawnInterval; reefTimer=firstReefDelay;
-        resources.ResetResources(); movement.SetExternalContact(false,null);
+        resources.ResetResources(); movement.ResetCollisionState();
         foreach(OceanObject item in allObjects) if(item!=null) item.Deactivate();
         goalGuideDirection=movement.Forward.normalized;
         Vector3 goalPosition=GoalEntryPosition();
@@ -74,7 +74,7 @@ public class OceanSystem : MonoBehaviour
         goal.Activate(goalPosition,Vector3.zero,goalPosition,goalDepth);
         for(int i=0;i<initialFixedCount;i++) TrySpawnFixed();
         for(int i=0;i<initialFishCount;i++) TrySpawnFish();
-        Physics.SyncTransforms(); UpdateCounts();
+        Physics.SyncTransforms(); UpdateCounts(); radar.ClearEchoes();
     }
 
     public void Step(float dt)
@@ -85,7 +85,6 @@ public class OceanSystem : MonoBehaviour
         Vector3 depthPosition=goal.transform.position;
         depthPosition.y=movement.courseOrigin.position.y-goalDepth;
         goal.transform.position=depthPosition;
-        movement.SetExternalContact(false,null);
         foreach(OceanObject item in allObjects)
         {
             if(item==null || !item.Active || item==goal) continue;
@@ -122,10 +121,14 @@ public class OceanSystem : MonoBehaviour
             if(reefTimer<=0f) { TrySpawnGiantReef(); reefTimer=Mathf.Max(0.1f,reefSpawnInterval); }
         }
         Physics.SyncTransforms();
+        OceanObject touchingFish=null;
         if(fishPool!=null) foreach(OceanObject fish in fishPool)
         {
-            if(fish!=null && fish.Active && TouchesHull(fish)) { movement.SetExternalContact(true,fish.name); break; }
+            if(fish!=null && fish.Active && TouchesHull(fish)) { touchingFish=fish; break; }
         }
+        // Report once after checking the pool, so continuous fish contact stays latched.
+        // A fatal contact must be resolved before accepting goal contact in this step.
+        movement.SetExternalContact(touchingFish!=null,touchingFish!=null ? touchingFish.name : null,touchingFish);
         if(goalApproaching && TouchesHull(goal) && resources.CompleteVoyage()) won=true;
         UpdateCounts();
     }
@@ -198,7 +201,7 @@ public class OceanSystem : MonoBehaviour
         position.y=movement.courseOrigin.position.y-(topDepth+height*0.5f);
         item.transform.localScale=new Vector3(width,height,width);
         item.blinkPeriod=0f; item.radarRadius=width*0.5f;
-        item.Activate(position,Vector3.zero,position,movement.Depth);
+        item.Activate(position,Vector3.zero,position,movement.Depth,reefRiseToAvoid);
         UpdateCounts(); return true;
     }
 

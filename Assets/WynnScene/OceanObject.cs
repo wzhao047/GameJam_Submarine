@@ -16,20 +16,28 @@ public class OceanObject : MonoBehaviour
     [SerializeField] private Vector3 destination;
     [SerializeField] private float age;
     [SerializeField] private float spawnDepth;
+    [Tooltip("Ascent required when this reef was spawned. Later global edits do not change this reef.")]
+    [SerializeField] private float requiredReefRise;
     public Vector3 WorldVelocity=>worldVelocity;
     public Vector3 Destination=>destination;
     public float Age=>age;
     public float SpawnDepth=>spawnDepth;
+    public float RequiredReefRise=>requiredReefRise;
+    public float ReefClearanceDepth=>spawnDepth-requiredReefRise;
+    public bool IsReefClearAtDepth(float depth)=>kind==OceanKind.GiantReef && requiredReefRise>0f && depth<=ReefClearanceDepth;
     public bool Active=>isActiveAndEnabled && collisionShape!=null && collisionShape.enabled;
     public bool BlinkVisible=>blinkPeriod<=0f || Mathf.Repeat(age,blinkPeriod)<blinkPeriod*blinkDuty;
     public bool Arrived { get; private set; }
+    public uint ActivationVersion { get; private set; }
 
-    public void Activate(Vector3 position,Vector3 velocity,Vector3 endpoint,float depth)
+    public void Activate(Vector3 position,Vector3 velocity,Vector3 endpoint,float depth,float reefRise=0f)
     {
+        ActivationVersion++;
         transform.position=position;
         worldVelocity=velocity;
         destination=endpoint;
         age=0f; spawnDepth=depth; Arrived=false;
+        requiredReefRise=kind==OceanKind.GiantReef ? Mathf.Max(0f,reefRise) : 0f;
         gameObject.SetActive(true);
     }
     public void Deactivate() { gameObject.SetActive(false); }

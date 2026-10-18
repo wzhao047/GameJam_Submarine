@@ -38,6 +38,9 @@ public class SubmarineMovement : MonoBehaviour
     [SerializeField] private int collisionCount;
     [SerializeField] private bool contact;
     [SerializeField] private string lastObstacle;
+    [SerializeField] private float lastImpactSpeed;
+    // Raised once on contact entry, carrying the speed captured before the stop.
+    public event System.Action<float> CollisionEntered;
     public float Speed=>speed;
     public float Depth=>body!=null && courseOrigin!=null ? -(body.position.y-courseOrigin.position.y) : depth;
     public float Distance=>distance;
@@ -45,6 +48,8 @@ public class SubmarineMovement : MonoBehaviour
     public float AngularSpeed=>angularSpeed;
     public int CollisionCount=>collisionCount;
     public bool Contact=>contact;
+    public float LastImpactSpeed=>lastImpactSpeed;
+    public OceanObject ContactObject { get; private set; }
     public Vector3 WorldPosition=>body!=null ? body.position : transform.position;
     public Vector3 Forward=>new Vector3(Mathf.Sin(heading*Mathf.Deg2Rad),0f,Mathf.Cos(heading*Mathf.Deg2Rad));
     public float LastContactTime { get; private set; }=float.NegativeInfinity;
@@ -53,10 +58,36 @@ public class SubmarineMovement : MonoBehaviour
     private bool ready;
     private bool externalContact;
     private bool hasInputFocus=true;
-    public void SetExternalContact(bool value,string obstacleName)
+    public void SetExternalContact(bool value,string obstacleName,OceanObject obstacle=null)
     {
         externalContact=value;
-        if(value) lastObstacle=obstacleName;
+        if(value)
+        {
+            lastObstacle=obstacleName;
+            ContactObject=obstacle;
+            UpdateContact(true,speed);
+        }
+    }
+
+    public void ConsumeRedContact()
+    {
+        OceanObject obstacle=ContactObject;
+        if(obstacle==null || !obstacle.Active ||
+            (obstacle.kind!=OceanKind.FixedObstacle && obstacle.kind!=OceanKind.FishSchool)) return;
+        // Remove the hit contact immediately; keep the authored pool slot reusable.
+        obstacle.Deactivate();
+        contact=externalContact=false;
+        ContactObject=null;
+    }
+
+    public void StopMotion()=>speed=verticalSpeed=angularSpeed=0f;
+
+    public void ResetCollisionState()
+    {
+        contact=externalContact=false;
+        ContactObject=null;
+        collisionCount=0; lastImpactSpeed=0f; lastObstacle="";
+        LastContactTime=float.NegativeInfinity;
     }
 
     private void Awake()
@@ -111,7 +142,7 @@ public class SubmarineMovement : MonoBehaviour
     public void Simulate(float dt)
     {
         if(!ready || dt<=0f) return;
-        if(resources!=null && (resources.Failed || resources.Won)) { speed=verticalSpeed=angularSpeed=0f; return; }
+        if(resources!=null && (resources.Failed || resources.Won)) { StopMotion(); return; }
         gear=Mathf.Clamp(gear,0,3); trim=Mathf.Clamp(trim,-maximumTrim,maximumTrim);
         float target=gear==1 ? lowSpeed : gear==2 ? cruiseSpeed : gear==3 ? highSpeed : 0f;
         if(resources!=null && !resources.HasPower) target=0f;
@@ -139,16 +170,25 @@ public class SubmarineMovement : MonoBehaviour
             Vector3 centre=body.position+rotation*Vector3.Scale(hull.center,hull.transform.lossyScale);
             int count=Physics.OverlapBoxNonAlloc(centre,HalfSize(),overlaps,rotation,~0,QueryTriggerInteraction.Ignore);
             bool blocked=false;
-            for(int i=0;i<count;i++) if(IsObstacle(overlaps[i])) { blocked=true; lastObstacle=overlaps[i].name; break; }
+            for(int i=0;i<count;i++) if(IsObstacle(overlaps[i]))
+            {
+                blocked=true; lastObstacle=overlaps[i].name;
+                ContactObject=overlaps[i].GetComponentInParent<OceanObject>();
+                break;
+            }
             if(blocked) { clear=false; break; }
             accepted=rotation; acceptedHeading=candidateHeading;
         }
         body.rotation=accepted; heading=Mathf.Repeat(acceptedHeading,360f);
         return clear;
     }
-    public void Move(Vector3 displacement) { if(ready) ApplyMotion(displacement,false); }
+    public void Move(Vector3 displacement)
+    {
+        if(ready && (resources==null || (!resources.Failed && !resources.Won))) ApplyMotion(displacement,false);
+    }
     private void ApplyMotion(Vector3 displacement,bool turnBlocked)
     {
+        float impactSpeed=speed;
         Vector3 start=body.position;
         Vector3 position=Sweep(start,Vector3.right*Mathf.Sign(displacement.x),Mathf.Abs(displacement.x),out bool blockedX);
         position=Sweep(position,Vector3.forward*Mathf.Sign(displacement.z),Mathf.Abs(displacement.z),out bool blockedZ);
@@ -158,8 +198,17 @@ public class SubmarineMovement : MonoBehaviour
         if(blockedX || blockedZ) speed=0f;
         if(blockedY) verticalSpeed=0f;
         bool touched=blockedX || blockedY || blockedZ || turnBlocked || externalContact;
-        if(touched && !contact) { collisionCount++; LastContactTime=Time.time; }
-        contact=touched; RefreshTelemetry();
+        UpdateContact(touched,impactSpeed);
+        RefreshTelemetry();
+    }
+    private void UpdateContact(bool touched,float impactSpeed)
+    {
+        bool entered=touched && !contact;
+        contact=touched;
+        if(!entered || (resources!=null && (resources.Failed || resources.Won))) return;
+        collisionCount++; LastContactTime=Time.time;
+        lastImpactSpeed=Mathf.Max(0f,impactSpeed);
+        CollisionEntered?.Invoke(lastImpactSpeed);
     }
     private Vector3 HalfSize()
     {
@@ -181,6 +230,7 @@ public class SubmarineMovement : MonoBehaviour
             float travel=Mathf.Max(0f,hit.distance-skin);
             if(travel>=allowed) continue;
             allowed=travel; blocked=true; lastObstacle=hit.collider.name;
+            ContactObject=hit.collider.GetComponentInParent<OceanObject>();
         }
         return start+direction*allowed;
     }

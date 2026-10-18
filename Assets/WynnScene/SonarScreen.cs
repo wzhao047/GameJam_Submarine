@@ -5,6 +5,7 @@ public class SonarScreen : MonoBehaviour
     [Header("Scene references (all authored in WynnScene)")]
     public SubmarineMovement movement;
     public VoyageResources resources;
+    public HullIntegrity hullIntegrity;
     public OceanSystem ocean;
     public Camera sonarCamera;
     public Transform grid;
@@ -66,19 +67,26 @@ public class SonarScreen : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!showDebugOverlay || movement == null) return;
-        GUI.Box(new Rect(15f, 15f, 340f, 225f), "NAVIGATION TEST");
+        if (movement == null) return;
+        if(showDebugOverlay) DrawDebugOverlay();
+        if (resources != null && resources.Failed)
+            GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height * 0.5f - 40f, 360f, 80f), $"VOYAGE FAILED\n{resources.FailureReason}\nExit Play Mode to restart.");
+        else if (resources != null && resources.Won)
+            GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height * 0.5f - 40f, 360f, 80f), "VOYAGE COMPLETE\nTarget reached. Exit Play Mode to restart.");
+    }
+
+    private void DrawDebugOverlay()
+    {
+        GUI.Box(new Rect(15f, 15f, 340f, 250f), "NAVIGATION TEST");
         GUI.Label(new Rect(30f, 45f, 315f, 25f), $"Gear {movement.gear} | Speed {movement.Speed:0.0} m/s");
         GUI.Label(new Rect(30f, 70f, 315f, 25f), $"Depth {movement.Depth:0.0} m | Distance {movement.Distance:0.0} m");
         GUI.Label(new Rect(30f, 95f, 315f, 25f), $"Heading {movement.Heading:000} | Trim {movement.trim:0.0} | Hits {movement.CollisionCount}");
         if (resources != null)
             GUI.Label(new Rect(30f, 120f, 315f, 25f), $"Battery {resources.Battery:0.0} | Oxygen {resources.Oxygen:0}s");
-        GUI.Label(new Rect(30f, 150f, 315f, 25f), "R/F: gear | W/S: rise/dive | Q/E: trim");
-        GUI.Label(new Rect(30f, 175f, 315f, 25f), "1/2/3: station | Z: sonar | X: pump");
-        GUI.Label(new Rect(30f, 200f, 315f, 25f), "Hold A / D: change horizontal heading");
-        if (resources != null && resources.Failed)
-            GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height * 0.5f - 40f, 360f, 80f), "VOYAGE FAILED\nOxygen depleted. Exit Play Mode to restart.");
-        else if (resources != null && resources.Won)
-            GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height * 0.5f - 40f, 360f, 80f), "VOYAGE COMPLETE\nTarget reached. Exit Play Mode to restart.");
+        if(hullIntegrity!=null)
+            GUI.Label(new Rect(30f, 145f, 315f, 25f), $"Hull {hullIntegrity.Hull:0.0}/{hullIntegrity.maximumHull:0.0} | Last damage {hullIntegrity.LastDamage:0.0}");
+        GUI.Label(new Rect(30f, 175f, 315f, 25f), "R/F: gear | W/S: rise/dive | Q/E: trim");
+        GUI.Label(new Rect(30f, 200f, 315f, 25f), "1/2/3: station | Z: sonar | X: pump");
+        GUI.Label(new Rect(30f, 225f, 315f, 25f), "Hold A / D: change horizontal heading");
     }
 }

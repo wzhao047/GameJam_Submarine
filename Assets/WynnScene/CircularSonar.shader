@@ -87,10 +87,10 @@ Shader "Submarine/SonarLayers"
                         float halo=exp(-d*d/max(radius*radius*4,0.00001))*0.4;
                         if(_EchoColors[i].w>1.5 && _EchoColors[i].w<2.5)
                         {
-                            dot=(1-smoothstep(radius-aa,radius+aa,d))*0.22+Stroke(d-radius,0.002,aa)*0.8;
+                            dot=(1-smoothstep(radius-aa,radius+aa,d))*0.22+Stroke(d-radius,0.002,aa);
                             halo=0;
                         }
-                        float a=saturate((dot+halo)*_Echoes[i].z*inside);
+                        float a=saturate((dot+halo)*inside)*saturate(_Echoes[i].z);
                         premultiplied=_EchoColors[i].rgb*a+premultiplied*(1-a);
                         alpha=a+alpha*(1-a);
                     }

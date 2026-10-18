@@ -2,7 +2,8 @@ using UnityEngine;
 [ExecuteAlways,DefaultExecutionOrder(50)]
 public class SonarSweep : SonarVisualLayer
 {
-    [Min(0.5f)] public float sweepDuration=4f;
+    [Tooltip("Seconds per full scan and per contact-position refresh on the linked Circular Sonar.")]
+    [Min(0.5f)] public float sweepDuration=2f;
     public bool clockwise=true;
     [Range(5f,100f)] public float trailDegrees=40f;
     [Range(0f,360f)] public float previewAngle=35f;
