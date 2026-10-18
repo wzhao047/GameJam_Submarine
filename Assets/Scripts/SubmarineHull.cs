@@ -36,6 +36,11 @@ public class SubmarineHull : MonoBehaviour
     private bool wasTouching;
     private bool failed;
 
+    public bool HasFailed => failed;
+
+    public float HullPercentage =>
+        hull / Mathf.Max(1f, maximumHull) * 100f;
+
     private Vector3 previousPosition;
 
     private float shakeRemaining;

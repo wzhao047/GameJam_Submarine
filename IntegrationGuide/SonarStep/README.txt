@@ -1,0 +1,1 @@
+Copy .txt contents into matching .cs files. Create SubmarineIntegrationState.cs if absent. Do not create duplicate classes. Bind the SAME externalState on imported SubmarineMovement and VoyageResources. Leave those fields empty in WynnScene. Keep imported HullIntegrity and Main_Camera disabled. This stage connects sonar/environment only, not the new collision system.

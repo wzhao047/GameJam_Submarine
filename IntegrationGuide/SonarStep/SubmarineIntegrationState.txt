@@ -1,0 +1,42 @@
+﻿using UnityEngine;
+
+public class SubmarineIntegrationState : MonoBehaviour
+{
+    public SubmarineController controller;
+    public SubmarinePower power;
+    public SubmarineOxygen oxygen;
+    public FusePuzzleInteraction fuse;
+    public Transform oceanOrigin;
+
+    public float Speed => controller != null ? controller.CurrentSpeed : 0f;
+    public float Depth => controller != null ? controller.Depth : 0f;
+    public float Heading => controller != null ? controller.Heading : 0f;
+    public float Distance => controller != null ? controller.DistanceTravelled : 0f;
+    public float Battery => power != null ? power.BatteryRemaining : 0f;
+    public float Oxygen => oxygen != null ? oxygen.OxygenRemaining : 0f;
+    public bool HasPower => power != null && power.HasPower;
+    public bool SonarOnline => power != null && fuse != null &&
+        power.SonarWorking && fuse.CircuitWorking;
+    public bool IsVoyageRunning => controller != null &&
+        controller.isActiveAndEnabled && oxygen != null && !oxygen.HasFailed;
+
+    public Vector3 WorldPosition
+    {
+        get
+        {
+            Vector3 origin = oceanOrigin != null ? oceanOrigin.position : Vector3.zero;
+            if (controller == null) return origin;
+            Vector2 navigation = controller.NavigationPosition;
+            return origin + new Vector3(navigation.x, -controller.Depth, navigation.y);
+        }
+    }
+
+    private void Start()
+    {
+        if (controller == null || power == null || oxygen == null || fuse == null)
+        {
+            Debug.LogError("Integration state: assign controller, power, oxygen and fuse.", this);
+            enabled = false;
+        }
+    }
+}

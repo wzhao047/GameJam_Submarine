@@ -6,7 +6,10 @@ using UnityEngine.InputSystem;
 
 public class SubmarineController : MonoBehaviour
 {
-    [Header("四档推进速度：停车 / 低速 / 巡航 / 高速")]
+    [Header("当前视角控制器")]
+    public RepairStationView stationView;
+
+    [Header("四档推进速度")]
     public float lowSpeed = 1f;
     public float cruiseSpeed = 3f;
     public float highSpeed = 5f;
@@ -17,36 +20,28 @@ public class SubmarineController : MonoBehaviour
     public float verticalAcceleration = 0.8f;
     public float naturalSinkSpeed = 0.3f;
 
-    [Header("配平：负数上浮，正数下沉")]
+    [Header("配平")]
     public float trimStep = 0.1f;
     public float maxTrim = 1f;
 
     [Header("转向")]
     public float maxTurnSpeed = 12f;
     public float turnAcceleration = 6f;
-
-    [Tooltip("限制偏航角度，保证潜艇始终朝航道前方行驶")]
     public float maxHeadingAngle = 65f;
 
-    [Header("起始深度")]
+    [Header("初始深度")]
     public float startingDepth = 100f;
 
     private int gear;
-    private int currentStation = 1;
-
     private float currentSpeed;
     private float distanceTravelled;
     private float depth;
     private float verticalSpeed;
     private float trim;
-
     private float heading;
     private float turnSpeed;
 
-    // x：左右位置；y：沿航道前进的位置。
-    // 这些只是后台数据，不会移动船舱模型。
     private Vector2 navigationPosition;
-
     private SubmarinePower power;
 
     private readonly string[] gearNames =
@@ -62,10 +57,26 @@ public class SubmarineController : MonoBehaviour
     public float Heading => heading;
     public Vector2 NavigationPosition => navigationPosition;
 
+    public bool CanDrive =>
+        isActiveAndEnabled &&
+        stationView != null &&
+        stationView.IsDriving;
+
     private void Awake()
     {
         power = GetComponent<SubmarinePower>();
         depth = Mathf.Max(0f, startingDepth);
+    }
+
+    private void Start()
+    {
+        if (stationView == null)
+        {
+            Debug.LogError(
+                "请在 SubmarineController 中绑定 Station View。",
+                this
+            );
+        }
     }
 
     private void Update()
@@ -73,21 +84,13 @@ public class SubmarineController : MonoBehaviour
         float diveInput = 0f;
         float turnInput = 0f;
 
-#if ENABLE_INPUT_SYSTEM
-        Keyboard keyboard = Keyboard.current;
-
-        if (keyboard != null)
+        // 只有驾驶台允许读取驾驶输入。
+        if (CanDrive)
         {
-            if (keyboard.digit1Key.wasPressedThisFrame)
-                currentStation = 1;
+#if ENABLE_INPUT_SYSTEM
+            Keyboard keyboard = Keyboard.current;
 
-            if (keyboard.digit2Key.wasPressedThisFrame)
-                currentStation = 2;
-
-            if (keyboard.digit3Key.wasPressedThisFrame)
-                currentStation = 3;
-
-            if (currentStation == 1)
+            if (keyboard != null)
             {
                 if (keyboard.rKey.wasPressedThisFrame)
                     ChangeGear(1);
@@ -113,20 +116,8 @@ public class SubmarineController : MonoBehaviour
                 if (keyboard.eKey.wasPressedThisFrame)
                     ChangeTrim(trimStep);
             }
-        }
 
 #elif ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-            currentStation = 1;
-
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-            currentStation = 2;
-
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-            currentStation = 3;
-
-        if (currentStation == 1)
-        {
             if (Input.GetKeyDown(KeyCode.R))
                 ChangeGear(1);
 
@@ -150,9 +141,10 @@ public class SubmarineController : MonoBehaviour
 
             if (Input.GetKeyDown(KeyCode.E))
                 ChangeTrim(trimStep);
-        }
 #endif
+        }
 
+        // 离开驾驶台后，航行和惯性仍继续模拟。
         SimulateNavigation(diveInput, turnInput, Time.deltaTime);
     }
 
@@ -163,9 +155,7 @@ public class SubmarineController : MonoBehaviour
     {
         bool propulsionAvailable = power != null && power.HasPower;
 
-        float targetSpeed = propulsionAvailable
-            ? GetGearSpeed()
-            : 0f;
+        float targetSpeed = propulsionAvailable ? GetGearSpeed() : 0f;
 
         currentSpeed = Mathf.MoveTowards(
             currentSpeed,
@@ -173,17 +163,13 @@ public class SubmarineController : MonoBehaviour
             acceleration * deltaTime
         );
 
-        // 有前进速度时才有转向效果，停车后不能原地旋转。
         float steeringStrength = Mathf.Clamp01(
             currentSpeed / Mathf.Max(lowSpeed, 0.1f)
         );
 
-        float targetTurnSpeed =
-            turnInput * maxTurnSpeed * steeringStrength;
-
         turnSpeed = Mathf.MoveTowards(
             turnSpeed,
-            targetTurnSpeed,
+            turnInput * maxTurnSpeed * steeringStrength,
             turnAcceleration * deltaTime
         );
 
@@ -193,29 +179,26 @@ public class SubmarineController : MonoBehaviour
             maxHeadingAngle
         );
 
-        // 到达转向边界时，清除继续向外转的惯性。
         if ((heading >= maxHeadingAngle && turnSpeed > 0f) ||
             (heading <= -maxHeadingAngle && turnSpeed < 0f))
         {
             turnSpeed = 0f;
         }
 
-        float headingRadians = heading * Mathf.Deg2Rad;
+        float radians = heading * Mathf.Deg2Rad;
 
         Vector2 direction = new Vector2(
-            Mathf.Sin(headingRadians),
-            Mathf.Cos(headingRadians)
+            Mathf.Sin(radians),
+            Mathf.Cos(radians)
         );
 
-        float travelledThisFrame = currentSpeed * deltaTime;
+        float movement = currentSpeed * deltaTime;
 
-        navigationPosition += direction * travelledThisFrame;
-        distanceTravelled += travelledThisFrame;
+        navigationPosition += direction * movement;
+        distanceTravelled += movement;
 
         float targetVerticalSpeed =
-            diveInput * maxVerticalSpeed
-            + naturalSinkSpeed
-            + trim;
+            diveInput * maxVerticalSpeed + naturalSinkSpeed + trim;
 
         verticalSpeed = Mathf.MoveTowards(
             verticalSpeed,
@@ -270,21 +253,25 @@ public class SubmarineController : MonoBehaviour
             $"Forward: {navigationPosition.y:F1} m");
 
         GUI.Label(new Rect(35, 170, 350, 25),
-            $"Lateral: {navigationPosition.x:F1} m (+ Right)");
+            $"Lateral: {navigationPosition.x:F1} m");
 
         GUI.Label(new Rect(35, 200, 350, 25),
-            $"Heading: {heading:F1} deg (+ Right)");
+            $"Heading: {heading:F1} deg");
 
         GUI.Label(new Rect(35, 230, 350, 25),
             $"Depth: {depth:F1} m | Vertical: {verticalSpeed:F2}");
 
+        string station = stationView != null
+            ? stationView.StationName
+            : "NOT ASSIGNED";
+
         GUI.Label(new Rect(35, 260, 350, 25),
-            $"Trim: {trim:F1} | Station: {currentStation}");
+            $"Trim: {trim:F1} | Station: {station}");
 
         GUI.Label(new Rect(35, 290, 350, 25),
-            "R/F Gear | W/S Rise/Dive | A/D Turn");
+            CanDrive ? "DRIVING CONTROLS AVAILABLE" : "DRIVING CONTROLS LOCKED");
 
         GUI.Label(new Rect(35, 320, 350, 25),
-            "Q/E Trim | 1/2/3 Station");
+            "R/F Gear | W/S Rise/Dive | A/D Turn | Q/E Trim");
     }
 }

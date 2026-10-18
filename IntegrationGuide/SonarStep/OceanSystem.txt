@@ -1,0 +1,244 @@
+﻿using UnityEngine;
+
+[DefaultExecutionOrder(-100)]
+public class OceanSystem : MonoBehaviour
+{
+    [Header("Scene references / pre-authored pools")]
+    public SubmarineMovement movement;
+    public VoyageResources resources;
+    public CircularSonar radar;
+    public BoxCollider seabedCollider;
+    public OceanObject[] fixedPool;
+    public OceanObject[] fishPool;
+    public OceanObject[] reefPool;
+    public OceanObject goal;
+    public OceanObject[] allObjects;
+    [Header("Spawning")]
+    public int randomSeed=42;
+    public bool spawningEnabled=true;
+    public bool fishMovementEnabled=true;
+    [Range(0,8)] public int initialFixedCount=3;
+    [Range(0,6)] public int initialFishCount=1;
+    [Min(0.1f)] public float fixedSpawnInterval=12f;
+    [Min(0.1f)] public float fishSpawnInterval=6f;
+    [Min(0.1f)] public float reefSpawnInterval=24f;
+    [Min(0f)] public float firstReefDelay=12f;
+    public Vector2 fishSpeedRange=new Vector2(1f,6f);
+    [Min(1f)] public float despawnDistance=240f;
+    [Header("Giant reefs")]
+    [Min(0f)] public float minimumReefDepth=20f;
+    [Min(1f)] public float reefRiseToAvoid=20f;
+    [Range(0.1f,0.8f)] public float reefDiameterFractionOfRadar=0.5f;
+    [Range(0.6f,1.2f)] public float reefWarningRangeFraction=0.95f;
+    [Header("Seabed goal")]
+    [Min(1f)] public float goalDepth=500f;
+    [Min(1f)] public float seabedDepth=505f;
+    [Tooltip("Horizontal target distance when the approach stage starts. Before then the radar shows a fixed world bearing.")]
+    [Min(1f)] public float goalInitialDistance=300f;
+    [Min(0.1f)] public float goalApproachSpeed=8f;
+    [Header("Runtime telemetry")]
+    [SerializeField] private bool goalApproaching;
+    [SerializeField] private bool won;
+    [SerializeField] private float elapsed;
+    [SerializeField] private float goalApproachStartDistance;
+    [SerializeField] private Vector3 goalGuideDirection=Vector3.right;
+    [SerializeField] private int activeFixed,activeFish,activeReefs;
+    public bool GoalApproaching=>goalApproaching;
+    public bool Won=>won;
+    public float GoalApproachStartDistance=>goalApproachStartDistance;
+    public int ActiveFixed=>activeFixed;
+    public int ActiveFish=>activeFish;
+    public int ActiveReefs=>activeReefs;
+    public Vector3 GoalFallbackDirection=>goalGuideDirection;
+    private System.Random random;
+    private float fixedTimer,fishTimer,reefTimer;
+    private bool ready;
+
+    private void Awake()
+    {
+        if(movement==null || movement.externalState==null) ResetOcean();
+    }
+    private void Start()
+    {
+        // All host Awake methods have initialized their data before Start.
+        if(movement!=null && movement.externalState!=null) ResetOcean();
+    }
+    private void FixedUpdate()=>Step(Time.fixedDeltaTime);
+
+    [ContextMenu("Reset ocean and resources")]
+    public void ResetOcean()
+    {
+        ready=movement!=null && resources!=null && radar!=null && goal!=null && allObjects!=null;
+        if(!ready) { Debug.LogError("Ocean system needs movement, resources, radar, goal and the authored object pools.",this); return; }
+        random=new System.Random(randomSeed);
+        SyncSeabed();
+        elapsed=0f; goalApproachStartDistance=0f; won=goalApproaching=false;
+        fixedTimer=fixedSpawnInterval; fishTimer=fishSpawnInterval; reefTimer=firstReefDelay;
+        resources.ResetResources(); movement.ResetCollisionState();
+        foreach(OceanObject item in allObjects) if(item!=null) item.Deactivate();
+        goalGuideDirection=movement.Forward.normalized;
+        Vector3 goalPosition=GoalEntryPosition();
+        goal.blinkPeriod=0f;
+        if(movement.externalState==null)
+            goal.Activate(goalPosition,Vector3.zero,goalPosition,goalDepth);
+        else
+            goal.Deactivate(); // Host owns the fixed-route destination.
+        for(int i=0;i<initialFixedCount;i++) TrySpawnFixed();
+        for(int i=0;i<initialFishCount;i++) TrySpawnFish();
+        Physics.SyncTransforms(); UpdateCounts(); radar.ClearEchoes();
+    }
+
+    public void Step(float dt)
+    {
+        if(!ready || dt<=0f || won || resources.Failed) return;
+        if(movement.externalState!=null) movement.SyncExternalPose();
+        elapsed+=dt;
+        SyncSeabed();
+        Vector3 depthPosition=goal.transform.position;
+        depthPosition.y=movement.courseOrigin.position.y-goalDepth;
+        goal.transform.position=depthPosition;
+        foreach(OceanObject item in allObjects)
+        {
+            if(item==null || !item.Active || item==goal) continue;
+            if(item.kind!=OceanKind.FishSchool || fishMovementEnabled) item.Advance(dt);
+            Vector3 offset=item.transform.position-movement.WorldPosition;
+            float planar=new Vector2(offset.x,offset.z).magnitude;
+            // Keep every contact until it leaves radar range, even with short recycle distances.
+            float visibleRange=item.kind==OceanKind.GiantReef
+                ? Radius+Mathf.Max(0f,item.radarRadius) : Radius*1.0001f;
+            float recycleDistance=Mathf.Max(despawnDistance,visibleRange);
+            bool fishFinishedOutside=item.kind==OceanKind.FishSchool && item.Arrived && planar>visibleRange;
+            if(planar>recycleDistance || fishFinishedOutside) item.Deactivate();
+        }
+        if(movement.externalState==null && !goalApproaching && movement.Depth>=goalDepth)
+        {
+            // The distant guide becomes a physical contact only at the depth gate.
+            // Start from the same bearing as the edge marker, even after a long voyage.
+            goal.transform.position=GoalEntryPosition();
+            goalApproaching=true;
+            Vector3 separation=goal.transform.position-movement.WorldPosition;
+            goalApproachStartDistance=new Vector2(separation.x,separation.z).magnitude;
+        }
+        if(goalApproaching)
+        {
+            Vector3 destination=movement.WorldPosition;
+            destination.y=movement.courseOrigin.position.y-goalDepth;
+            goal.transform.position=Vector3.MoveTowards(goal.transform.position,destination,Mathf.Max(0.1f,goalApproachSpeed)*dt);
+        }
+        if(spawningEnabled)
+        {
+            fixedTimer-=dt; fishTimer-=dt; reefTimer-=dt;
+            if(fixedTimer<=0f) { TrySpawnFixed(); fixedTimer=Mathf.Max(0.1f,fixedSpawnInterval); }
+            if(fishTimer<=0f) { TrySpawnFish(); fishTimer=Mathf.Max(0.1f,fishSpawnInterval); }
+            if(reefTimer<=0f) { TrySpawnGiantReef(); reefTimer=Mathf.Max(0.1f,reefSpawnInterval); }
+        }
+        Physics.SyncTransforms();
+        OceanObject touchingFish=null;
+        if(fishPool!=null) foreach(OceanObject fish in fishPool)
+        {
+            if(fish!=null && fish.Active && TouchesHull(fish)) { touchingFish=fish; break; }
+        }
+        // Report once after checking the pool, so continuous fish contact stays latched.
+        // A fatal contact must be resolved before accepting goal contact in this step.
+        movement.SetExternalContact(touchingFish!=null,touchingFish!=null ? touchingFish.name : null,touchingFish);
+        if(goalApproaching && TouchesHull(goal) && resources.CompleteVoyage()) won=true;
+        UpdateCounts();
+    }
+
+    private Vector3 GoalEntryPosition()
+    {
+        Vector3 position=movement.WorldPosition+goalGuideDirection*Mathf.Max(1f,goalInitialDistance);
+        position.y=movement.courseOrigin.position.y-goalDepth;
+        return position;
+    }
+
+    private bool TouchesHull(OceanObject item)
+    {
+        return item.Active && Physics.ComputePenetration(movement.hull,movement.body.position,movement.body.rotation,item.collisionShape,item.transform.position,item.transform.rotation,out Vector3 separation,out float distance);
+    }
+    private float Range(float minimum,float maximum)=>Mathf.Lerp(minimum,maximum,(float)random.NextDouble());
+    private float Radius=>Mathf.Max(1f,radar.detectionRadius);
+    private OceanObject Free(OceanObject[] pool)
+    {
+        if(pool==null) return null;
+        foreach(OceanObject item in pool) if(item!=null && !item.gameObject.activeSelf) return item;
+        return null;
+    }
+
+    public bool TrySpawnFixed()
+    {
+        if(!ready || won || resources.Failed) return false;
+        OceanObject item=Free(fixedPool);
+        if(item==null) return false;
+        float bearing=(movement.Heading+Range(-75f,75f))*Mathf.Deg2Rad;
+        Vector3 offset=new Vector3(Mathf.Sin(bearing),0f,Mathf.Cos(bearing))*Range(Radius*0.55f,Radius*0.95f);
+        Vector3 position=movement.WorldPosition+offset;
+        position.y+=Range(-5f,5f);
+        float width=Range(8f,14f);
+        item.transform.localScale=new Vector3(width,16f,width);
+        item.blinkPeriod=1f; item.radarRadius=0f;
+        item.Activate(position,Vector3.zero,position,movement.Depth);
+        UpdateCounts(); return true;
+    }
+
+    public bool TrySpawnFish()
+    {
+        if(!ready || won || resources.Failed) return false;
+        OceanObject item=Free(fishPool);
+        if(item==null) return false;
+        float start=Range(0f,Mathf.PI*2f);
+        float end=start+Range(120f,240f)*Mathf.Deg2Rad;
+        Vector3 origin=movement.WorldPosition;
+        Vector3 position=origin+new Vector3(Mathf.Cos(start),0f,Mathf.Sin(start))*Radius;
+        Vector3 destination=origin+new Vector3(Mathf.Cos(end),0f,Mathf.Sin(end))*Radius;
+        float minimum=Mathf.Max(0.01f,Mathf.Min(fishSpeedRange.x,fishSpeedRange.y));
+        float maximum=Mathf.Max(minimum,Mathf.Max(fishSpeedRange.x,fishSpeedRange.y));
+        Vector3 velocity=(destination-position).normalized*Range(minimum,maximum);
+        item.blinkPeriod=0.3f; item.radarRadius=0f;
+        item.Activate(position,velocity,destination,movement.Depth);
+        UpdateCounts(); return true;
+    }
+
+    public bool TrySpawnGiantReef()
+    {
+        if(!ready || won || resources.Failed || goalApproaching || movement.Depth<=minimumReefDepth) return false;
+        OceanObject item=Free(reefPool);
+        if(item==null) return false;
+        float width=Radius*2f*reefDiameterFractionOfRadar;
+        float bearing=(movement.Heading+Range(-15f,15f))*Mathf.Deg2Rad;
+        Vector3 position=movement.WorldPosition+new Vector3(Mathf.Sin(bearing),0f,Mathf.Cos(bearing))*Radius*reefWarningRangeFraction;
+        float topDepth=movement.Depth-reefRiseToAvoid+movement.hull.bounds.extents.y+movement.skin;
+        topDepth=Mathf.Max(topDepth,movement.hull.bounds.extents.y*2f+movement.skin*2f);
+        float height=Mathf.Max(1f,seabedDepth-topDepth);
+        position.y=movement.courseOrigin.position.y-(topDepth+height*0.5f);
+        item.transform.localScale=new Vector3(width,height,width);
+        item.blinkPeriod=0f; item.radarRadius=width*0.5f;
+        item.Activate(position,Vector3.zero,position,movement.Depth,reefRiseToAvoid);
+        UpdateCounts(); return true;
+    }
+
+    private void UpdateCounts()
+    {
+        activeFixed=Count(fixedPool); activeFish=Count(fishPool); activeReefs=Count(reefPool);
+    }
+    private void SyncSeabed()
+    {
+        seabedDepth=Mathf.Max(seabedDepth,goalDepth+5f);
+        if(seabedCollider==null) return;
+        Vector3 position=seabedCollider.transform.position;
+        position.y=movement.courseOrigin.position.y-seabedDepth-seabedCollider.bounds.extents.y;
+        seabedCollider.transform.position=position;
+    }
+    [ContextMenu("Spawn fixed obstacle")]
+    private void DebugSpawnFixed()=>TrySpawnFixed();
+    [ContextMenu("Spawn fish school")]
+    private void DebugSpawnFish()=>TrySpawnFish();
+    [ContextMenu("Spawn giant reef")]
+    private void DebugSpawnReef()=>TrySpawnGiantReef();
+    private static int Count(OceanObject[] pool)
+    {
+        int count=0;
+        if(pool!=null) foreach(OceanObject item in pool) if(item!=null && item.Active) count++;
+        return count;
+    }
+}

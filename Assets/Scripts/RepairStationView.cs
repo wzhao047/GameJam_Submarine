@@ -13,13 +13,28 @@ public class RepairStationView : MonoBehaviour
     public Button leftButton;
     public Button rightButton;
 
-    [Header("转头所需时间，单位：秒")]
+    [Header("转头时间，单位：秒")]
     [Min(0.1f)]
     public float transitionDuration = 0.8f;
 
     // 0：配电板，1：驾驶台，2：维修区。
     private int currentIndex = 1;
+    private bool transitioning;
     private Coroutine transition;
+
+    public bool IsDriving =>
+        isActiveAndEnabled &&
+        currentIndex == 1 &&
+        !transitioning;
+
+    public string StationName =>
+        transitioning
+            ? "MOVING"
+            : currentIndex == 0
+                ? "POWER"
+                : currentIndex == 1
+                    ? "DRIVING"
+                    : "REPAIR";
 
     private void Start()
     {
@@ -48,6 +63,8 @@ public class RepairStationView : MonoBehaviour
 
     private void ChangeView(int direction)
     {
+        if (!isActiveAndEnabled) return;
+
         int nextIndex = Mathf.Clamp(currentIndex + direction, 0, 2);
 
         if (nextIndex == currentIndex) return;
@@ -55,13 +72,13 @@ public class RepairStationView : MonoBehaviour
         Transform target = GetView(nextIndex);
         if (target == null) return;
 
-        currentIndex = nextIndex;
-
         if (transition != null)
             StopCoroutine(transition);
 
-        transition = StartCoroutine(MoveToView(target));
+        currentIndex = nextIndex;
+        transitioning = true;
 
+        transition = StartCoroutine(MoveToView(target));
         RefreshButtons();
     }
 
@@ -88,10 +105,8 @@ public class RepairStationView : MonoBehaviour
         {
             elapsed += Time.deltaTime;
 
-            // 开始和结束都放慢，避免突然启动、突然停止。
             float progress = Mathf.SmoothStep(
-                0f,
-                1f,
+                0f, 1f,
                 Mathf.Clamp01(elapsed / duration)
             );
 
@@ -108,16 +123,28 @@ public class RepairStationView : MonoBehaviour
             target.rotation
         );
 
+        transitioning = false;
         transition = null;
     }
 
     private void RefreshButtons()
     {
         if (leftButton != null)
-            leftButton.interactable = currentIndex > 0;
+        {
+            leftButton.interactable =
+                isActiveAndEnabled && currentIndex > 0;
+        }
 
         if (rightButton != null)
-            rightButton.interactable = currentIndex < 2;
+        {
+            rightButton.interactable =
+                isActiveAndEnabled && currentIndex < 2;
+        }
+    }
+
+    private void OnEnable()
+    {
+        RefreshButtons();
     }
 
     private void OnDisable()
@@ -126,5 +153,8 @@ public class RepairStationView : MonoBehaviour
             StopCoroutine(transition);
 
         transition = null;
+        transitioning = false;
+
+        RefreshButtons();
     }
 }
