@@ -1,9 +1,5 @@
 using UnityEngine;
 
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
-
 public class SubmarinePower : MonoBehaviour
 {
     [Header("µç³Ø")]
@@ -46,26 +42,6 @@ public class SubmarinePower : MonoBehaviour
 
     private void Update()
     {
-#if ENABLE_INPUT_SYSTEM
-        Keyboard keyboard = Keyboard.current;
-
-        if (keyboard != null)
-        {
-            if (keyboard.zKey.wasPressedThisFrame)
-                sonarSwitch = !sonarSwitch;
-
-            if (keyboard.xKey.wasPressedThisFrame)
-                pumpSwitch = !pumpSwitch;
-        }
-
-#elif ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.Z))
-            sonarSwitch = !sonarSwitch;
-
-        if (Input.GetKeyDown(KeyCode.X))
-            pumpSwitch = !pumpSwitch;
-#endif
-
         battery = Mathf.Max(
             0f,
             battery - GetTotalDrain() * Time.deltaTime
