@@ -4,24 +4,25 @@ using TMPro;
 [DefaultExecutionOrder(1000)]
 public class RepairVoyageResult : MonoBehaviour
 {
-    [Header("航行系统")]
+    [Header("Navigation systems / 航行系统")]
     public SubmarineController controller;
     public SubmarineOxygen oxygen;
     public SubmarinePower power;
     public Camera playerCamera;
 
-    [Header("维修记录与故障调度")]
+    [Header("Repair systems / 维修系统")]
     public RepairVoyageRecord record;
     public RepairFaultDirector director;
 
-    [Header("终点：沿航道向前的距离，单位米")]
+    [Header("Destination distance / 终点前进距离")]
     [Min(1f)]
     public float destinationForwardDistance = 1500f;
 
-    [Header("结算界面")]
+    [Header("Result interface / 结算界面")]
     public GameObject resultPanel;
     public TMP_Text resultText;
 
+    private SubmarineHull hull;
     private bool ended;
     private float startTime;
 
@@ -34,7 +35,20 @@ public class RepairVoyageResult : MonoBehaviour
             record.leak == null || record.cooling == null ||
             record.fuse == null)
         {
-            Debug.LogError("请补齐结算系统及维修记录的引用。", this);
+            Debug.LogError("请补齐航行结算和维修记录的引用。", this);
+            enabled = false;
+            return;
+        }
+
+        hull = controller.GetComponent<SubmarineHull>();
+
+        if (hull == null)
+        {
+            Debug.LogError(
+                "Controller 对应的对象上找不到 SubmarineHull。",
+                this
+            );
+
             enabled = false;
             return;
         }
@@ -48,10 +62,15 @@ public class RepairVoyageResult : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (ended) return;
+        if (ended)
+            return;
 
-        // 同一帧同时满足失败和抵达条件时，优先判定失败。
-        if (oxygen.HasFailed)
+        // 同时发生损毁与抵达时，优先判断失败。
+        if (hull.HasFailed)
+        {
+            EndVoyage(false, "HULL DESTROYED - THREE COLLISIONS");
+        }
+        else if (oxygen.HasFailed)
         {
             EndVoyage(false, "OXYGEN DEPLETED");
         }
@@ -69,7 +88,9 @@ public class RepairVoyageResult : MonoBehaviour
 
     private void EndVoyage(bool success, string cause)
     {
-        if (ended) return;
+        if (ended)
+            return;
+
         ended = true;
 
         float elapsed = Time.time - startTime;
@@ -85,19 +106,20 @@ public class RepairVoyageResult : MonoBehaviour
             $"Voyage time: {elapsed:F0} s\n" +
             $"Travelled: {controller.DistanceTravelled:F0} m\n" +
             $"Forward progress: {controller.NavigationPosition.y:F0} m\n" +
-            $"Oxygen remaining: {oxygen.OxygenPercentage:F0}%\n\n" +
+            $"Oxygen remaining: {oxygen.OxygenPercentage:F0}%\n" +
+            $"Hull remaining: {hull.HullPercentage:F0}%\n" +
+            $"Collisions: {hull.CollisionCount}/3\n\n" +
             report +
             "\n\nClick Restart to begin a new voyage.";
 
-        // 停止航行、供电、氧气及故障调度。
+        // 停止航行、资源消耗和故障生成。
         StopScript(director);
         StopScript(controller);
         StopScript(power);
         StopScript(oxygen);
+        StopScript(hull);
 
-        StopScript(controller.GetComponent<SubmarineHull>());
-
-        // 停止维修与环境变化。
+        // 停止维修交互与环境变化。
         StopScript(record.leak);
         StopScript(record.cooling);
         StopScript(record.fuse);
