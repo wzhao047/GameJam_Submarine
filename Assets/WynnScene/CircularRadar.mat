@@ -30,13 +30,21 @@ Material:
     m_Ints: []
     m_Floats:
     - _Aspect: 1.6
+    - _Crosshair: 1
     - _DotRadius: 0.018
+    - _Heading: 0
+    - _HeadingArrow: 1
+    - _Layer: 0
+    - _MapRotation: 0
     - _Powered: 1
+    - _RingCount: 4
     - _ScanAngle: 0.61
+    - _SweepDirection: -1
     - _TrailAngle: 0.7
     - _UseRadar: 1
     m_Colors:
     - _EchoColor: {r: 1, g: 0.025, b: 0.015, a: 1}
     - _RingColor: {r: 0.04, g: 0.8, b: 0.54999995, a: 1}
+    - _Tint: {r: 0.04, g: 0.8, b: 0.54999995, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
