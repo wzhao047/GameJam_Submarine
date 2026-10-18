@@ -5,13 +5,11 @@ public class RepairFloodPrototype : MonoBehaviour
     [Header("漏水维修逻辑")]
     public LeakRepairInteraction repair;
 
-    [Header("积水参数")]
+    [Header("累计进水参数")]
     public float maximumWater = 100f;
     public float leakPerSecond = 2f;
-    public float drainPerSecond = 3f;
 
     private float water;
-    private bool testPumpOn;
 
     public float Water => water;
 
@@ -20,18 +18,11 @@ public class RepairFloodPrototype : MonoBehaviour
 
     private void Update()
     {
-        if (repair == null) return;
-
-        float change = 0f;
-
-        if (repair.IsLeaking)
-            change += Mathf.Max(0f, leakPerSecond);
-
-        if (testPumpOn)
-            change -= Mathf.Max(0f, drainPerSecond);
+        if (repair == null || !repair.IsLeaking)
+            return;
 
         water = Mathf.Clamp(
-            water + change * Time.deltaTime,
+            water + Mathf.Max(0f, leakPerSecond) * Time.deltaTime,
             0f,
             Mathf.Max(1f, maximumWater)
         );
@@ -43,11 +34,11 @@ public class RepairFloodPrototype : MonoBehaviour
         float left = Screen.width - width - 10f;
 
         GUILayout.BeginArea(
-            new Rect(left, 280f, width, 210f),
+            new Rect(left, 280f, width, 135f),
             GUI.skin.box
         );
 
-        GUILayout.Label("BILGE WATER");
+        GUILayout.Label("ACCUMULATED WATER");
 
         if (repair == null)
         {
@@ -55,25 +46,14 @@ public class RepairFloodPrototype : MonoBehaviour
         }
         else
         {
-            GUILayout.Label($"Water level: {WaterPercentage:F0}%");
+            GUILayout.Label($"Water: {WaterPercentage:F0}%");
 
             GUILayout.Label(
                 repair.IsLeaking ? "Leak: ACTIVE" : "Leak: STOPPED"
             );
 
-            GUILayout.Label(
-                WaterPercentage >= 80f
-                    ? "WARNING: HIGH WATER"
-                    : "Water below warning level"
-            );
-
-            if (GUILayout.Button(
-                testPumpOn ? "Test Pump: ON" : "Test Pump: OFF"))
-            {
-                testPumpOn = !testPumpOn;
-            }
-
-            GUILayout.Label("Test only: no battery connection.");
+            if (WaterPercentage >= 80f)
+                GUILayout.Label("WARNING: HIGH WATER");
         }
 
         GUILayout.EndArea();
