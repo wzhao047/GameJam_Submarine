@@ -2,6 +2,10 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 public class RepairStationView : MonoBehaviour
 {
     [Header("三个视角定位点")]
@@ -49,6 +53,24 @@ public class RepairStationView : MonoBehaviour
         }
 
         RefreshButtons();
+    }
+
+    private void Update()
+    {
+#if ENABLE_INPUT_SYSTEM
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null) return;
+
+        if (keyboard.qKey.wasPressedThisFrame)
+            LookLeft();
+        else if (keyboard.eKey.wasPressedThisFrame)
+            LookRight();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.Q))
+            LookLeft();
+        else if (Input.GetKeyDown(KeyCode.E))
+            LookRight();
+#endif
     }
 
     public void LookLeft()
