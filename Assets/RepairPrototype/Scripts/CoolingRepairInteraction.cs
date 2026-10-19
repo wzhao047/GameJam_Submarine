@@ -40,6 +40,14 @@ public class CoolingRepairInteraction : MonoBehaviour
     private string message = "Cooling system normal.";
 
     public bool Repaired => verified;
+    public string RepairStatus => cooling == null ? "Missing cooling reference" :
+        !HasFault ? (verified ? "Repair complete" : "Normal") :
+        fixedJoint ? "Joint fixed - restore power" :
+        !inspected ? "Inspect joint first" :
+        cooling.IsPowered ? "Switch power OFF before repairing" :
+        sharedToolbox == null ? "Missing toolbox reference" :
+        !sharedToolbox.HasTools ? "Take the wrench first" :
+        "Ready - click the joint to repair";
 
     // ���޺õ���δͨ�縴�飬Ҳ�㱾�ι�����δ�����ꡣ
     public bool HasFault =>
@@ -52,8 +60,18 @@ public class CoolingRepairInteraction : MonoBehaviour
         cooling.isActiveAndEnabled &&
         !HasFault;
 
+    [Header("Repair action sounds")]
+    public AudioClip powerSwitchClip;
+    public AudioClip jointRepairClip;
+    [Range(0f, 1f)] public float actionVolume = 0.55f;
+    private AudioSource actionSource;
+
     private void Start()
     {
+        actionSource = gameObject.AddComponent<AudioSource>();
+        actionSource.playOnAwake = false;
+        actionSource.loop = false;
+        actionSource.spatialBlend = 0f;
         if (playerCamera == null)
             playerCamera = Camera.main;
 
@@ -118,6 +136,12 @@ public class CoolingRepairInteraction : MonoBehaviour
             InteractWithJoint();
     }
 
+    private void PlayActionSound(AudioClip clip)
+    {
+        if (clip == null || actionSource == null) return;
+        actionSource.Stop();
+        actionSource.PlayOneShot(clip, actionVolume);
+    }
     private bool Matches(Transform hit, Transform target)
     {
         return target != null &&
@@ -135,6 +159,7 @@ public class CoolingRepairInteraction : MonoBehaviour
     private void TogglePower()
     {
         cooling.SetPower(!cooling.IsPowered);
+        PlayActionSound(powerSwitchClip);
         if (CompleteRepairIfReady())
         {
             RefreshSwitchVisuals();
@@ -195,6 +220,7 @@ public class CoolingRepairInteraction : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (actionSource != null) Destroy(actionSource);
         if (!switchVisualsInitialized) return;
         for (int i = 0; i < switchRenderers.Length; i++)
             if (switchRenderers[i] != null) switchRenderers[i].sharedMaterials = originalSwitchMaterials[i];
@@ -238,6 +264,7 @@ public class CoolingRepairInteraction : MonoBehaviour
             }
 
             fixedJoint = true;
+            PlayActionSound(jointRepairClip);
             cooling.SetCoolingFault(false);
 
             message = "Joint fixed. Restore power to complete the repair.";
@@ -252,6 +279,11 @@ public class CoolingRepairInteraction : MonoBehaviour
 
         verified = true;
         message = "Cooling restored. Observe the temperature.";
+    }
+
+    private void OnDisable()
+    {
+        if (actionSource != null) actionSource.Stop();
     }
 
     private void OnGUI()

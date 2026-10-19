@@ -58,8 +58,18 @@ public class LeakRepairInteraction : MonoBehaviour
     public bool ToolTaken =>
         sharedToolbox != null && sharedToolbox.HasTools;
 
+    [Header("Repair action sounds")]
+    public AudioClip valveTurnClip;
+    public AudioClip clampInstallClip;
+    [Range(0f, 1f)] public float actionVolume = 0.55f;
+    private AudioSource actionSource;
+
     private void Start()
     {
+        actionSource = gameObject.AddComponent<AudioSource>();
+        actionSource.playOnAwake = false;
+        actionSource.loop = false;
+        actionSource.spatialBlend = 0f;
         if (playerCamera == null)
             playerCamera = Camera.main;
 
@@ -124,6 +134,12 @@ public class LeakRepairInteraction : MonoBehaviour
             ToggleValve();
     }
 
+    private void PlayActionSound(AudioClip clip)
+    {
+        if (clip == null || actionSource == null) return;
+        actionSource.Stop();
+        actionSource.PlayOneShot(clip, actionVolume);
+    }
     private bool Matches(Transform hit, Transform target)
     {
         return target != null &&
@@ -148,6 +164,7 @@ public class LeakRepairInteraction : MonoBehaviour
             valveRotating = true;
         }
         valveClosed = !valveClosed;
+        PlayActionSound(valveTurnClip);
         if (faultActive && clampInstalled && !valveClosed)
         {
             repaired = true;
@@ -187,6 +204,7 @@ public class LeakRepairInteraction : MonoBehaviour
 
     private void OnDisable()
     {
+        if (actionSource != null) actionSource.Stop();
         // Finish the visual state if the voyage ends or this component is disabled.
         if (valveRotating && valve != null && valve == valveRotationTarget)
         {
@@ -235,6 +253,7 @@ public class LeakRepairInteraction : MonoBehaviour
 
             clampInstalled = true;
             sealingClamp.SetActive(true);
+            PlayActionSound(clampInstallClip);
 
             message = "Clamp installed. Reopen V1 to complete the repair.";
             return;
@@ -249,6 +268,11 @@ public class LeakRepairInteraction : MonoBehaviour
         repaired = true;
         faultActive = false;
         message = "No leakage detected. Repair complete.";
+    }
+
+    private void OnDestroy()
+    {
+        if (actionSource != null) Destroy(actionSource);
     }
 
     private void OnGUI()

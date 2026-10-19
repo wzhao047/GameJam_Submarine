@@ -61,8 +61,18 @@ public class FusePuzzleInteraction : MonoBehaviour
         ready && !faultActive &&
         cooling != null && cooling.IsPowered;
 
+    [Header("Repair action sounds")]
+    public AudioClip fuseRemoveClip;
+    public AudioClip fuseInsertClip;
+    [Range(0f, 1f)] public float actionVolume = 0.55f;
+    private AudioSource actionSource;
+
     private void Start()
     {
+        actionSource = gameObject.AddComponent<AudioSource>();
+        actionSource.playOnAwake = false;
+        actionSource.loop = false;
+        actionSource.spatialBlend = 0f;
         if (playerCamera == null)
             playerCamera = Camera.main;
 
@@ -187,6 +197,12 @@ public class FusePuzzleInteraction : MonoBehaviour
         }
     }
 
+    private void PlayActionSound(AudioClip clip)
+    {
+        if (clip == null || actionSource == null) return;
+        actionSource.Stop();
+        actionSource.PlayOneShot(clip, actionVolume);
+    }
     private bool Matches(Transform hit, Transform target)
     {
         return target != null && (hit == target || hit.IsChildOf(target));
@@ -225,6 +241,7 @@ public class FusePuzzleInteraction : MonoBehaviour
             if (occupants[i] == index)
             {
                 occupants[i] = -1;
+                PlayActionSound(fuseRemoveClip);
                 fuses[index].localPosition = homePositions[index];
                 break;
             }
@@ -251,6 +268,7 @@ public class FusePuzzleInteraction : MonoBehaviour
         }
 
         SeatFuse(selected, slotIndex);
+        PlayActionSound(fuseInsertClip);
         ClearSelection();
 
         message = "Fuse placed. Follow the job card.";
@@ -320,6 +338,16 @@ public class FusePuzzleInteraction : MonoBehaviour
             fuses[selected].localScale = originalScales[selected];
 
         selected = -1;
+    }
+
+    private void OnDisable()
+    {
+        if (actionSource != null) actionSource.Stop();
+    }
+
+    private void OnDestroy()
+    {
+        if (actionSource != null) Destroy(actionSource);
     }
 
     private void OnGUI()

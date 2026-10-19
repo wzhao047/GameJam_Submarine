@@ -14,6 +14,14 @@ public class RepairFaultDirector : MonoBehaviour
     [Header("之后每次事件的随机间隔")]
     public Vector2 eventInterval = new Vector2(45f, 90f);
 
+    [Header("Fault variety")]
+    [Tooltip("Protection time after a system is repaired before it can fail again.")]
+    [Min(0f)] public float repairedSystemCooldown = 120f;
+    public bool avoidConsecutiveFaults = true;
+    private int lastFault = -1;
+    private readonly int[] triggerCounts = new int[3];
+    private readonly float[] cooldownRemaining = new float[3];
+    private readonly bool[] wasFaulted = new bool[3];
     private float remainingTime;
 
     private readonly List<int> candidates = new List<int>(3);
@@ -31,11 +39,18 @@ public class RepairFaultDirector : MonoBehaviour
             return;
         }
 
+        wasFaulted[0] = leak.HasFault;
+        wasFaulted[1] = cooling.HasFault;
+        wasFaulted[2] = fuse.HasFault;
         remainingTime = RandomDelay(firstFaultDelay);
     }
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked || Time.timeScale <= 0f) return;
+        TrackRecovery(0, leak.HasFault);
+        TrackRecovery(1, cooling.HasFault);
+        TrackRecovery(2, fuse.HasFault);
         remainingTime -= Time.deltaTime;
 
         if (remainingTime > 0f)
@@ -51,18 +66,27 @@ public class RepairFaultDirector : MonoBehaviour
     {
         candidates.Clear();
 
-        if (leak.CanTriggerFault)
+        if (leak.CanTriggerFault && cooldownRemaining[0] <= 0f)
             candidates.Add(0);
 
-        if (cooling.CanTriggerFault)
+        if (cooling.CanTriggerFault && cooldownRemaining[1] <= 0f)
             candidates.Add(1);
 
-        if (fuse.CanTriggerFault)
+        if (fuse.CanTriggerFault && cooldownRemaining[2] <= 0f)
             candidates.Add(2);
 
         // 全部设备都在故障或等待复查时，本次不再叠加。
         if (candidates.Count == 0)
             return;
+
+        // Avoid an immediate repeat when another eligible system is available.
+        if (avoidConsecutiveFaults && candidates.Count > 1)
+            candidates.Remove(lastFault);
+        int minimumCount = int.MaxValue;
+        foreach (int candidate in candidates)
+            minimumCount = Mathf.Min(minimumCount, triggerCounts[candidate]);
+        for (int i = candidates.Count - 1; i >= 0; i--)
+            if (triggerCounts[candidates[i]] > minimumCount) candidates.RemoveAt(i);
 
         int choice = candidates[
             Random.Range(0, candidates.Count)
@@ -91,6 +115,9 @@ public class RepairFaultDirector : MonoBehaviour
 
         if (triggered)
         {
+            lastFault = choice;
+            triggerCounts[choice]++;
+            wasFaulted[choice] = true;
             Debug.Log(
                 $"[Repair event] {faultName}",
                 this
@@ -98,6 +125,13 @@ public class RepairFaultDirector : MonoBehaviour
         }
     }
 
+    private void TrackRecovery(int index, bool faulted)
+    {
+        cooldownRemaining[index] = Mathf.Max(0f, cooldownRemaining[index] - Time.deltaTime);
+        if (wasFaulted[index] && !faulted)
+            cooldownRemaining[index] = Mathf.Max(0f, repairedSystemCooldown);
+        wasFaulted[index] = faulted;
+    }
     private float RandomDelay(Vector2 range)
     {
         float minimum = Mathf.Max(
