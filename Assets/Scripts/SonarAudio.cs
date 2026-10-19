@@ -3,24 +3,24 @@ using UnityEngine;
 [RequireComponent(typeof(AudioSource))]
 public class SubmarineSonarAudio : MonoBehaviour
 {
-    [Header("ÒÑÓÐÏµÍ³")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ÏµÍ³")]
     public SubmarineController controller;
     public SubmarineSonar sonar;
 
-    [Header("ÌáÊ¾Òô£ºÁô¿ÕÊ¹ÓÃÁÙÊ±ÉùÄÅÒô")]
+    [Header("ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public AudioClip pingClip;
 
     [Range(0f, 1f)]
     public float volume = 0.5f;
 
-    [Header("ÁÙÊ±ÌáÊ¾Òô")]
+    [Header("ï¿½ï¿½Ê±ï¿½ï¿½Ê¾ï¿½ï¿½")]
     public float frequency = 900f;
     public float duration = 0.3f;
 
     private AudioSource source;
     private AudioClip generatedClip;
 
-    private float scanTimer;
+
 
     private void Awake()
     {
@@ -29,7 +29,7 @@ public class SubmarineSonarAudio : MonoBehaviour
         source.playOnAwake = false;
         source.loop = false;
 
-        // Àë¿ª¼ÝÊ»Ì¨ºóÈÔÄÜÌýµ½¡£
+        // ï¿½ë¿ªï¿½ï¿½Ê»Ì¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         source.spatialBlend = 0f;
     }
 
@@ -38,7 +38,7 @@ public class SubmarineSonarAudio : MonoBehaviour
         if (controller == null || sonar == null)
         {
             Debug.LogError(
-                "ÇëÁ¬½ÓÉùÄÅÉùÒôµÄ Controller ºÍ Sonar¡£",
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Controller ï¿½ï¿½ Sonarï¿½ï¿½",
                 this
             );
 
@@ -48,39 +48,25 @@ public class SubmarineSonarAudio : MonoBehaviour
 
         if (pingClip == null)
             generatedClip = CreateTemporaryPing();
+
+        sonar.ScanCompleted += PlayScanPing;
     }
 
     private void Update()
     {
-        // Ê¤Àû»òÊ§°Üºó£¬¼ÝÊ»½Å±¾»á±»Í£ÓÃ¡£
-        if (!controller.isActiveAndEnabled)
-        {
+        if (!controller.isActiveAndEnabled || !sonar.IsWorking || GameMenuController.IsInputBlocked)
             source.Stop();
-            return;
-        }
+    }
 
-        if (!sonar.IsWorking)
-        {
-            source.Stop();
-            return;
-        }
-
-        // ÉùÄÅ¶ÏµçÊ±¼ÆÊ±ÔÝÍ££¬»Ö¸´ºó¼ÌÐø¡£
-        scanTimer += Time.deltaTime;
-
-        float period = Mathf.Max(0.2f, sonar.scanPeriod);
-
-        if (scanTimer < period)
+    private void PlayScanPing()
+    {
+        if (!isActiveAndEnabled || controller == null || !controller.isActiveAndEnabled
+            || sonar == null || !sonar.IsWorking || GameMenuController.IsInputBlocked
+            || GameMenuController.IsStartMenuVisible)
             return;
 
-        scanTimer %= period;
-
-        AudioClip clip = pingClip != null
-            ? pingClip
-            : generatedClip;
-
-        if (clip != null)
-            source.PlayOneShot(clip, volume);
+        AudioClip clip = pingClip != null ? pingClip : generatedClip;
+        if (clip != null) source.PlayOneShot(clip, volume);
     }
 
     private AudioClip CreateTemporaryPing()
@@ -105,7 +91,7 @@ public class SubmarineSonarAudio : MonoBehaviour
             float time = i / (float)sampleRate;
             float progress = time / length;
 
-            // ¶Ì´ÙÆðÒô£¬ËæºóÖð½¥Ë¥¼õ¡£
+            // ï¿½Ì´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¥ï¿½ï¿½ï¿½ï¿½
             float attack = Mathf.Clamp01(time / 0.008f);
             float decay = Mathf.Exp(-progress * 6f);
             float endFade = Mathf.Clamp01(
@@ -140,6 +126,7 @@ public class SubmarineSonarAudio : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (sonar != null) sonar.ScanCompleted -= PlayScanPing;
         if (generatedClip != null)
             Destroy(generatedClip);
     }

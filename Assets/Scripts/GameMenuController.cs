@@ -18,6 +18,11 @@ public class GameMenuController : MonoBehaviour
     private Text modeDescription;
     private Text modeConfirmation;
     private bool ended;
+    private GameObject creditsPanel;
+    private GameObject soundPanel;
+    private GameObject overlayReturnPanel;
+    [Header("Credits (edit Resources/MenuCredits.txt, or assign another text file)")]
+    public TextAsset creditsText;
 
     private void Awake()
     {
@@ -30,6 +35,14 @@ public class GameMenuController : MonoBehaviour
     public string resumeLabel = "RESUME VOYAGE";
     public string restartLabel = "RESTART";
     public string quitLabel = "QUIT GAME";
+    [Header("Menu audio (assign clips on GameMenuDefaults outside Play Mode)")]
+    public AudioClip menuMusic;
+    public AudioClip menuHoverSound;
+    public AudioClip menuClickSound;
+    [Range(0f, 1f)] public float menuMusicVolume = 0.3f;
+    [Range(0f, 1f)] public float menuHoverVolume = 0.2f;
+    [Range(0f, 1f)] public float menuClickVolume = 0.5f;
+    private SubmarineMenuAudio menuAudio;
     [Header("Menu appearance")]
     public Font font;
     [Range(24, 140)] public int titleSize = 68;
@@ -247,6 +260,8 @@ public class GameMenuController : MonoBehaviour
             isPause ? (UnityEngine.Events.UnityAction)ResumeGame : StartGame);
         if (isPause) AddButton(content.transform, restartLabel, RestartGame);
         AddButton(content.transform, "MODE", ShowModeSelection);
+        if (!isPause) AddButton(content.transform, "CREDIT", ShowCredits);
+        AddButton(content.transform, "SOUND", ShowSoundSettings);
         AddButton(content.transform, quitLabel, QuitGame);
         return panel;
     }
@@ -276,7 +291,11 @@ public class GameMenuController : MonoBehaviour
         root.GetComponent<LayoutElement>().preferredHeight = 70;
         root.GetComponent<Image>().color = Color.clear;
         var button = root.GetComponent<Button>();
-        button.onClick.AddListener(action);
+        button.onClick.AddListener(() =>
+        {
+            if (menuAudio != null) menuAudio.PlayClick();
+            action();
+        });
         button.transition = Selectable.Transition.None;
         var navigation = button.navigation;
         navigation.mode = Navigation.Mode.Vertical;
@@ -309,7 +328,13 @@ public class GameMenuController : MonoBehaviour
         visual.normalColor = textColor;
         visual.focusColor = selectedColor;
         visual.accentColor = accentColor;
+        visual.menu = this;
         visual.Refresh();
+    }
+
+    public void PlayMenuHover()
+    {
+        if (menuAudio != null) menuAudio.PlayHover();
     }
 
     private static void FocusPanel(GameObject panel)
@@ -321,6 +346,14 @@ public class GameMenuController : MonoBehaviour
 
     private void Start()
     {
+        // Recover empty serialized references after importing the prefab before a script reload.
+        if (menuMusic == null) menuMusic = Resources.Load<AudioClip>("MenuAudio/Periscope Drift");
+        if (menuHoverSound == null) menuHoverSound = Resources.Load<AudioClip>("MenuAudio/Menu_Hover");
+        if (menuClickSound == null) menuClickSound = Resources.Load<AudioClip>("MenuAudio/Menu_Click");
+        menuAudio = SubmarineMenuAudio.GetOrCreate();
+        menuAudio.Configure(menuMusic, menuHoverSound, menuClickSound,
+            menuMusicVolume, menuHoverVolume, menuClickVolume);
+        menuAudio.SetMusicVisible(!VoyageModeSession.AutoStartAfterReload);
         CreateMissingPanels();
         IsStartMenuVisible = true;
         HideGameplayUI();
@@ -346,6 +379,8 @@ public class GameMenuController : MonoBehaviour
         bool escapePressed = Input.GetKeyDown(KeyCode.Escape);
 #endif
         if (escapePressed && modePanel != null && modePanel.activeSelf) { CancelModeSelection(); return; }
+        if (escapePressed && ((creditsPanel != null && creditsPanel.activeSelf)
+            || (soundPanel != null && soundPanel.activeSelf))) { CloseExtraPanel(); return; }
         if (!started || ended) return;
         if (escapePressed)
         {
@@ -358,6 +393,7 @@ public class GameMenuController : MonoBehaviour
 
     public void StartGame()
     {
+        if (menuAudio != null) menuAudio.SetMusicVisible(false);
         RestoreGameplayCamera();
         IsStartMenuVisible = false;
         started = true;
@@ -379,7 +415,8 @@ public class GameMenuController : MonoBehaviour
 
     public void ResumeGame()
     {
-        if (!started || ended || RepairEndingCredits.IsVisible || (modePanel != null && modePanel.activeSelf)) return;
+        if (!started || ended || RepairEndingCredits.IsVisible || (modePanel != null && modePanel.activeSelf)
+            || (soundPanel != null && soundPanel.activeSelf) || (creditsPanel != null && creditsPanel.activeSelf)) return;
 
         pausePanel.SetActive(false);
         SetPaused(false);
@@ -413,6 +450,133 @@ public class GameMenuController : MonoBehaviour
     }
 
     private Transform MenuCanvas => startPanel.transform.parent;
+
+    private void OpenExtraPanel(GameObject panel)
+    {
+        overlayReturnPanel = started ? pausePanel : startPanel;
+        overlayReturnPanel.SetActive(false);
+        panel.SetActive(true);
+        panel.transform.SetAsLastSibling();
+        FocusPanel(panel);
+    }
+
+    private void CloseExtraPanel()
+    {
+        if (creditsPanel != null) creditsPanel.SetActive(false);
+        if (soundPanel != null) soundPanel.SetActive(false);
+        PlayerPrefs.Save();
+        if (overlayReturnPanel != null)
+        {
+            overlayReturnPanel.SetActive(true);
+            FocusPanel(overlayReturnPanel);
+        }
+    }
+
+    public void ShowCredits()
+    {
+        // Refresh the text on every visit instead of keeping the first opened copy.
+        if (creditsPanel != null)
+        {
+            creditsPanel.SetActive(false);
+            Destroy(creditsPanel);
+            creditsPanel = null;
+        }
+        if (creditsPanel == null)
+        {
+            creditsPanel = CreateMenuOverlay("Credits", out Transform content);
+            AddLabel(content, "CREDIT", 40, 65);
+            var scrollObject = new GameObject("CreditsScroll", typeof(RectTransform), typeof(ScrollRect), typeof(LayoutElement));
+            scrollObject.transform.SetParent(content, false);
+            scrollObject.GetComponent<LayoutElement>().flexibleHeight = 1;
+            scrollObject.GetComponent<LayoutElement>().minHeight = 120;
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            viewport.transform.SetParent(scrollObject.transform, false);
+            viewport.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = viewportRect.offsetMax = Vector2.zero;
+            var asset = creditsText != null ? creditsText : Resources.Load<TextAsset>("MenuCredits");
+            AddLabel(viewport.transform, asset != null ? asset.text : "Add your credits in Resources/MenuCredits.txt", 26, 0);
+            var body = viewport.transform.GetChild(0).GetComponent<Text>();
+            // AddLabel supplies a fixed-height LayoutElement; the scroll content must
+            // use Text.preferredHeight instead so the fitter does not collapse it to zero.
+            body.GetComponent<LayoutElement>().enabled = false;
+            body.alignment = TextAnchor.UpperLeft;
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.verticalOverflow = VerticalWrapMode.Overflow;
+            var bodyRect = body.GetComponent<RectTransform>();
+            bodyRect.anchorMin = new Vector2(0, 1);
+            bodyRect.anchorMax = Vector2.one;
+            bodyRect.pivot = new Vector2(0.5f, 1);
+            bodyRect.anchoredPosition = Vector2.zero;
+            bodyRect.sizeDelta = Vector2.zero;
+            var fitter = body.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var scroll = scrollObject.GetComponent<ScrollRect>();
+            scroll.viewport = viewportRect;
+            scroll.content = bodyRect;
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 40;
+            AddButton(content, "BACK", CloseExtraPanel);
+        }
+        OpenExtraPanel(creditsPanel);
+        Canvas.ForceUpdateCanvases();
+        var creditsScroll = creditsPanel.GetComponentInChildren<ScrollRect>();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(creditsScroll.content);
+        creditsScroll.verticalNormalizedPosition = 1f;
+    }
+
+    public void ShowSoundSettings()
+    {
+        // Rebuild to read the current persisted values whenever this panel opens.
+        if (soundPanel != null) { soundPanel.SetActive(false); Destroy(soundPanel); }
+        soundPanel = CreateMenuOverlay("SoundSettings", out Transform content);
+        var soundContent = content.GetComponent<RectTransform>();
+        soundContent.anchorMin = new Vector2(0.2f, 0.08f);
+        soundContent.anchorMax = new Vector2(0.8f, 0.80f);
+        AddLabel(content, "SOUND", 40, 65);
+        AddVolumeSlider(content, "MASTER VOLUME", menuAudio.MasterLevel, menuAudio.SetMasterLevel);
+        AddVolumeSlider(content, "MENU MUSIC", menuAudio.MusicLevel, menuAudio.SetMusicLevel);
+        AddVolumeSlider(content, "MENU EFFECTS", menuAudio.EffectsLevel, menuAudio.SetEffectsLevel);
+        AddButton(content, "BACK", CloseExtraPanel);
+        OpenExtraPanel(soundPanel);
+    }
+
+    private void AddVolumeSlider(Transform parent, string title, float value, UnityEngine.Events.UnityAction<float> changed)
+    {
+        AddLabel(parent, $"{title}  {Mathf.RoundToInt(value * 100)}%", 26, 45);
+        var caption = parent.GetChild(parent.childCount - 1).GetComponent<Text>();
+        var root = new GameObject(title, typeof(RectTransform), typeof(Image), typeof(Slider), typeof(LayoutElement));
+        root.transform.SetParent(parent, false);
+        root.GetComponent<LayoutElement>().preferredHeight = 55;
+        root.GetComponent<Image>().color = new Color(0.12f, 0.15f, 0.13f);
+        var track = new GameObject("HandleArea", typeof(RectTransform));
+        track.transform.SetParent(root.transform, false);
+        var area = track.GetComponent<RectTransform>();
+        area.anchorMin = Vector2.zero; area.anchorMax = Vector2.one;
+        area.offsetMin = new Vector2(15, 0); area.offsetMax = new Vector2(-15, 0);
+        var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleObject.transform.SetParent(area, false);
+        var handle = handleObject.GetComponent<RectTransform>();
+        handle.anchorMin = new Vector2(0, 0.15f);
+        handle.anchorMax = new Vector2(0, 0.85f);
+        handle.sizeDelta = new Vector2(24, 0);
+        handleObject.GetComponent<Image>().color = accentColor;
+        var slider = root.GetComponent<Slider>();
+        slider.handleRect = handle;
+        slider.targetGraphic = handleObject.GetComponent<Image>();
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0; slider.maxValue = 1;
+        slider.SetValueWithoutNotify(value);
+        slider.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+        slider.onValueChanged.AddListener(level =>
+        {
+            changed(level);
+            caption.text = $"{title}  {Mathf.RoundToInt(level * 100)}%";
+        });
+    }
 
     private GameObject CreateMenuOverlay(string name, out Transform content)
     {
@@ -550,6 +714,7 @@ public sealed class SubmarineMenuOptionVisual : MonoBehaviour,
     public Color normalColor;
     public Color focusColor;
     public Color accentColor;
+    public GameMenuController menu;
     private bool selected;
     private bool modeOption;
     private bool chosen;
@@ -565,10 +730,17 @@ public sealed class SubmarineMenuOptionVisual : MonoBehaviour,
     private void OnDisable() { selected = false; }
     public void OnPointerEnter(PointerEventData data)
     {
-        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(gameObject);
+        if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != gameObject)
+            EventSystem.current.SetSelectedGameObject(gameObject);
+        else if (menu != null) menu.PlayMenuHover();
     }
     public void OnPointerExit(PointerEventData data) { }
-    public void OnSelect(BaseEventData data) { selected = true; Refresh(); }
+    public void OnSelect(BaseEventData data)
+    {
+        selected = true;
+        Refresh();
+        if (menu != null) menu.PlayMenuHover();
+    }
     public void OnDeselect(BaseEventData data) { selected = false; Refresh(); }
     public void Refresh()
     {

@@ -18,6 +18,9 @@ public class SubmarineController : MonoBehaviour
     public float highSpeed = 5f;
     public float acceleration = 1f;
 
+    [Header("Passive forward drift in STOP gear (m/s)")]
+    [Min(0.01f)] public float stopDriftSpeed = 0.15f;
+
     [Header("Éý½µ")]
     public float maxVerticalSpeed = 2f;
     public float verticalAcceleration = 0.8f;
@@ -153,7 +156,8 @@ public class SubmarineController : MonoBehaviour
     {
         bool propulsionAvailable = power != null && power.HasPower;
 
-        float targetSpeed = propulsionAvailable ? GetGearSpeed() : (gear > 0 ? lowSpeed : 0f);
+        float driftSpeed = Mathf.Max(0.01f, stopDriftSpeed);
+        float targetSpeed = propulsionAvailable ? GetGearSpeed() : (gear > 0 ? Mathf.Max(lowSpeed, driftSpeed) : driftSpeed);
         if (hull != null && hull.IsScrapingReef) targetSpeed *= 0.4f;
 
         currentSpeed = Mathf.MoveTowards(
@@ -211,7 +215,7 @@ public class SubmarineController : MonoBehaviour
             case 1: return lowSpeed;
             case 2: return cruiseSpeed;
             case 3: return highSpeed;
-            default: return 0f;
+            default: return Mathf.Max(0.01f, stopDriftSpeed);
         }
     }
 

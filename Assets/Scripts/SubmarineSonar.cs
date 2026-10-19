@@ -81,6 +81,8 @@ public class SubmarineSonar : MonoBehaviour
     private float refreshTimer;
     private bool lastWorking;
 
+    public event System.Action ScanCompleted;
+
     public bool IsWorking =>
         isActiveAndEnabled &&
         power != null &&
@@ -254,7 +256,13 @@ public class SubmarineSonar : MonoBehaviour
             : 0f;
 
         if (working)
+        {
             scanAngle = Mathf.Repeat(scanAngle + sweep, 360f);
+            // One shared sweep clock drives the screen and its ping, including after
+            // the title screen has advanced the animation while gameplay was paused.
+            if (sweep > 0f && previousAngle + sweep >= 360f)
+                ScanCompleted?.Invoke();
+        }
 
         HasContact = false;
         ContactRange = 0f;

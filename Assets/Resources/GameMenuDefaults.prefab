@@ -53,6 +53,12 @@ MonoBehaviour:
   resumeLabel: RESUME VOYAGE
   restartLabel: RESTART
   quitLabel: QUIT GAME
+  menuMusic: {fileID: 8300000, guid: 21c9b514a0da4c12aea33e1bbddc9c18, type: 3}
+  menuHoverSound: {fileID: 8300000, guid: 8ffa7d3ad579c174c95ef0a2c2515033, type: 3}
+  menuClickSound: {fileID: 8300000, guid: 3fef56b94272cd94d917a5d99cd86eb5, type: 3}
+  menuMusicVolume: 0.3
+  menuHoverVolume: 0.2
+  menuClickVolume: 0.5
   font: {fileID: 0}
   titleSize: 68
   buttonSize: 34
