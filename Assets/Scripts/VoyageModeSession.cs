@@ -83,7 +83,9 @@ public sealed class VoyageModeSession : MonoBehaviour
         {
             goal.goalLateral = 0f;
             goal.goalForward = boat.cruiseSpeed * Profile.goalCruiseSeconds;
+            goal.goalDepth = UnityEngine.Random.Range(4, 9) * 50;
         }
+        gameObject.AddComponent<SubmarineGoalDepthDisplay>();
         ApplyStage();
         repairSource = gameObject.AddComponent<AudioSource>();
         repairSource.playOnAwake = false;
