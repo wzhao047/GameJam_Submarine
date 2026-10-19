@@ -1,0 +1,33 @@
+结局滚动报幕
+
+已自动接入 RepairVoyageResult，原有场景无需重新挂接。
+阅读顺序：RESIDUAL PRESSURE → 结局徽记/原因 → 航行及维修记录 → 团队致谢 → 感谢游玩。
+报幕从内容顶部开始，缓慢向下阅读（文字随滚动向上移动）。
+
+交互
+- 播放期间自动滚动，暂时禁用手动拖动和滚轮。
+- 在屏幕任意位置双击，立即完成播放并定位末尾。
+- 自然播放完毕或双击快进后，显示重玩按钮，允许滚轮/拖动上下回看。
+- 结局页面不会再响应 Escape 打开暂停菜单。
+
+编辑内容与速度
+在 Project 窗口选择 Assets/Resources/EndingCreditsDefaults.prefab，在 Inspector 编辑：
+- Game Title：游戏标题，换行显示。
+- Team Heading / Team Credits：团队致谢标题、成员和分工，多行输入即可。
+- Thanks Message / Thanks Subtitle：最后的感谢语。
+- Restart Label / Playing Hint / Finished Hint：按钮和交互提示。
+- Ending Messages：四种结局提示文字，可换行；修改文案不会改变对应结局图标或触发条件。
+  Destination Reached Message：抵达目的地。
+  Hull Destroyed Message：船体损毁。
+  Oxygen Depleted Message：氧气耗尽。
+  Flooding Limit Reached Message：进水达到极限。
+- Scroll Speed：每秒滚动的 UI 单位，默认 42。
+- Opening Hold / Ending Hold：开头和结尾停留时长，默认 2.5 / 1.5 秒。
+- Double Click Window：两次点击的最大间隔，默认 0.35 秒。
+- Font：可指定包含中文的项目字体；未设置时使用系统字体。
+- Success / Hull / Oxygen / Flooding Icon：可选 Sprite；留空使用对应的矢量徽记。
+
+默认四种结局徽记：抵达目的地（船锚）、船体损毁（裂纹）、氧气耗尽（肺部）、进水极限（水滴）。
+已填入团队名单，报幕文案为英文。3D 建模及场景搭建的职位使用 3D & Environment Artists。
+如需单独覆盖某个场景，可给 RepairVoyageResult 的 Ending Credits 指定场景内的报幕组件。
+修改 prefab 应在退出 Play Mode 后进行，才能保存到下次运行。

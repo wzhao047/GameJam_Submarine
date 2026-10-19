@@ -320,7 +320,7 @@ public class GameMenuController : MonoBehaviour
 
     private void Update()
     {
-        if (!started) return;
+        if (!started || RepairEndingCredits.IsVisible) return;
 
 #if ENABLE_INPUT_SYSTEM
         bool escapePressed =
@@ -351,7 +351,7 @@ public class GameMenuController : MonoBehaviour
 
     public void PauseGame()
     {
-        if (!started) return;
+        if (!started || RepairEndingCredits.IsVisible) return;
 
         pausePanel.SetActive(true);
         SetPaused(true);
@@ -360,7 +360,7 @@ public class GameMenuController : MonoBehaviour
 
     public void ResumeGame()
     {
-        if (!started) return;
+        if (!started || RepairEndingCredits.IsVisible) return;
 
         pausePanel.SetActive(false);
         SetPaused(false);

@@ -22,6 +22,8 @@ public class RepairRestart : MonoBehaviour
         }
 
         loading = true;
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
 
         SceneManager.LoadScene(
             currentScene.path,

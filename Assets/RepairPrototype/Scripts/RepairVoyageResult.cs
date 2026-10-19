@@ -28,6 +28,9 @@ public class RepairVoyageResult : MonoBehaviour
     public GameObject resultPanel;
     public TMP_Text resultText;
 
+    [Header("Ending credits (optional scene override)")]
+    public RepairEndingCredits endingCredits;
+
     private SubmarineHull hull;
     private bool ended;
     private float startTime;
@@ -149,21 +152,14 @@ public class RepairVoyageResult : MonoBehaviour
         float elapsed = Time.time - startTime;
         string report = record.BuildReport();
 
-        string title = success
-            ? "VOYAGE COMPLETE"
-            : "VOYAGE FAILED";
-
         resultText.text =
-            title + "\n\n" +
-            $"Result: {cause}\n" +
             $"Voyage time: {elapsed:F0} s\n" +
             $"Travelled: {controller.DistanceTravelled:F0} m\n" +
             $"Forward progress: {controller.NavigationPosition.y:F0} m\n" +
             $"Oxygen remaining: {oxygen.OxygenPercentage:F0}%\n" +
             $"Hull remaining: {hull.HullPercentage:F0}%\n" +
             $"Collisions: {hull.CollisionCount}/3\n\n" +
-            report +
-            "\n\nClick Restart to begin a new voyage.";
+            report;
 
         StopScript(director);
         StopScript(controller);
@@ -210,8 +206,25 @@ public class RepairVoyageResult : MonoBehaviour
                 source.Stop();
         }
 
-        resultPanel.SetActive(true);
-        resultPanel.transform.SetAsLastSibling();
+        // Keep the old scene UI hidden; its references remain valid for existing scenes.
+        resultPanel.SetActive(false);
+        if (endingCredits == null)
+        {
+            var template = Resources.Load<RepairEndingCredits>("EndingCreditsDefaults");
+            endingCredits = template != null
+                ? Instantiate(template)
+                : new GameObject("Ending credits", typeof(RectTransform)).AddComponent<RepairEndingCredits>();
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(endingCredits.gameObject, gameObject.scene);
+        }
+        endingCredits.gameObject.SetActive(true);
+        endingCredits.Show(success, cause, resultText.text, RestartFromEnding);
+    }
+
+    private void RestartFromEnding()
+    {
+        var restart = GetComponent<RepairRestart>();
+        if (restart == null) restart = gameObject.AddComponent<RepairRestart>();
+        restart.RestartVoyage();
     }
 
     private void StopScript(MonoBehaviour script)
