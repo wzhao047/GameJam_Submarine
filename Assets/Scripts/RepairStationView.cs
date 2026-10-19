@@ -160,12 +160,14 @@ public class RepairStationView : MonoBehaviour
     {
         if (leftButton != null)
         {
+            leftButton.gameObject.SetActive(isActiveAndEnabled && currentIndex > 0);
             leftButton.interactable =
                 isActiveAndEnabled && currentIndex > 0;
         }
 
         if (rightButton != null)
         {
+            rightButton.gameObject.SetActive(isActiveAndEnabled && currentIndex < 2);
             rightButton.interactable =
                 isActiveAndEnabled && currentIndex < 2;
         }
