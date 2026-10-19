@@ -30,6 +30,13 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     [Header("Pickup feedback")]
     public Color pickupColor = new Color(0.4f, 1f, 1f);
     [Min(0.1f)] public float pickupFeedbackDuration = 2f;
+    [Tooltip("Normalized screen position: (0,0) bottom-left, (1,1) top-right.")]
+    public Vector2 pickupAnchor = new Vector2(0.5f, 0.8f);
+    [Tooltip("Offset in UI reference pixels from the anchor.")]
+    public Vector2 pickupOffset = Vector2.zero;
+    [Tooltip("How far the notification floats upward in UI reference pixels.")]
+    public float pickupRiseDistance = 30f;
+    private bool previewingPickup;
     private float pickupTimer;
     private GameObject feedbackRoot;
     private TextMeshProUGUI pickupLabel;
@@ -55,11 +62,20 @@ public class SubmarineOxygenDisplay : MonoBehaviour
 
     private void Update()
     {
-        pickupTimer = Mathf.Max(0f, pickupTimer - Time.deltaTime);
+        pickupTimer = Mathf.Max(0f, pickupTimer - (previewingPickup ? Time.unscaledDeltaTime : Time.deltaTime));
         AnimatePickupFeedback();
         RefreshDisplay();
     }
 
+    [ContextMenu("Preview Oxygen Pickup (Play Mode)")]
+    public void PreviewPickupFeedback()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || oxygenText == null) return;
+        if (pickupLabel == null) CreatePickupFeedback();
+        ShowPickupFeedback(20f);
+        // Calibration also animates while the start or pause menu is open.
+        previewingPickup = true;
+    }
     private void CreatePickupFeedback()
     {
         feedbackRoot = new GameObject("Oxygen Pickup Feedback", typeof(Canvas), typeof(CanvasScaler));
@@ -79,7 +95,8 @@ public class SubmarineOxygenDisplay : MonoBehaviour
         pickupLabel.alignment = TextAlignmentOptions.Center;
         pickupLabel.raycastTarget = false;
         RectTransform rect = pickupLabel.rectTransform;
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.8f);
+        rect.anchorMin = rect.anchorMax = pickupAnchor;
+        rect.anchoredPosition = pickupOffset;
         rect.sizeDelta = new Vector2(600f, 70f);
         feedbackRoot.SetActive(false);
     }
@@ -87,6 +104,7 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     private void ShowPickupFeedback(float restored)
     {
         if (!isActiveAndEnabled || pickupLabel == null) return;
+        previewingPickup = false;
         pickupTimer = Mathf.Max(0.1f, pickupFeedbackDuration);
         pickupLabel.text = restored > 0.01f
             ? $"OXYGEN +{restored:0.#}s"
@@ -105,7 +123,8 @@ public class SubmarineOxygenDisplay : MonoBehaviour
         }
         float progress = 1f - pickupTimer / Mathf.Max(0.1f, pickupFeedbackDuration);
         float eased = 1f - (1f - progress) * (1f - progress);
-        pickupLabel.rectTransform.anchoredPosition = new Vector2(0f, eased * 30f);
+        pickupLabel.rectTransform.anchorMin = pickupLabel.rectTransform.anchorMax = pickupAnchor;
+        pickupLabel.rectTransform.anchoredPosition = pickupOffset + Vector2.up * (eased * pickupRiseDistance);
         pickupLabel.rectTransform.localScale = Vector3.one *
             (1f + 0.15f * Mathf.Clamp01(1f - progress * 5f));
         Color tint = pickupColor;

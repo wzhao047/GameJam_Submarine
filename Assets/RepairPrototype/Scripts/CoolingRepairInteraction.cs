@@ -83,6 +83,7 @@ public class CoolingRepairInteraction : MonoBehaviour
     {
         if (GameMenuController.IsInputBlocked) return;
         if (cooling == null) return;
+        CompleteRepairIfReady();
 
         bool clicked = false;
         Vector2 position = Vector2.zero;
@@ -123,9 +124,22 @@ public class CoolingRepairInteraction : MonoBehaviour
             (hit == target || hit.IsChildOf(target));
     }
 
+    private bool CompleteRepairIfReady()
+    {
+        if (cooling == null || !fixedJoint || verified || !cooling.IsPowered)
+            return false;
+        verified = true;
+        message = "Cooling restored. Repair complete.";
+        return true;
+    }
     private void TogglePower()
     {
         cooling.SetPower(!cooling.IsPowered);
+        if (CompleteRepairIfReady())
+        {
+            RefreshSwitchVisuals();
+            return;
+        }
         RefreshSwitchVisuals();
 
         message = cooling.IsPowered
@@ -142,6 +156,7 @@ public class CoolingRepairInteraction : MonoBehaviour
     private void RefreshSwitchVisuals()
     {
         if (cooling == null) return;
+        CompleteRepairIfReady();
         if (!switchVisualsInitialized)
         {
             if (switchKid == null && powerSwitch != null)
@@ -225,13 +240,13 @@ public class CoolingRepairInteraction : MonoBehaviour
             fixedJoint = true;
             cooling.SetCoolingFault(false);
 
-            message = "Joint fixed. Restore power, then recheck.";
+            message = "Joint fixed. Restore power to complete the repair.";
             return;
         }
 
         if (!cooling.IsPowered)
         {
-            message = "Restore power before verification.";
+            message = "Restore power to complete the repair.";
             return;
         }
 
@@ -261,7 +276,7 @@ public class CoolingRepairInteraction : MonoBehaviour
             string status = !HasFault
                 ? "NORMAL"
                 : fixedJoint
-                    ? "AWAITING VERIFICATION"
+                    ? "RESTORE POWER"
                     : "FAULT";
 
             GUILayout.Label($"Status: {status}");

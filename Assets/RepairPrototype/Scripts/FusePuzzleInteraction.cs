@@ -69,7 +69,7 @@ public class FusePuzzleInteraction : MonoBehaviour
         ready =
             slots != null && slots.Length == 3 &&
             fuses != null && fuses.Length == 3 &&
-            cooling != null && testButton != null;
+            cooling != null;
 
         if (ready)
         {
@@ -124,7 +124,9 @@ public class FusePuzzleInteraction : MonoBehaviour
     private void Update()
     {
         if (GameMenuController.IsInputBlocked) return;
-        if (!ready || playerCamera == null) return;
+        if (!ready) return;
+        CompleteRepairIfReady();
+        if (playerCamera == null) return;
 
         if (selected >= 0 && cooling.IsPowered)
             ClearSelection();
@@ -187,7 +189,7 @@ public class FusePuzzleInteraction : MonoBehaviour
 
     private bool Matches(Transform hit, Transform target)
     {
-        return hit == target || hit.IsChildOf(target);
+        return target != null && (hit == target || hit.IsChildOf(target));
     }
 
     private bool CanHandleFuses()
@@ -263,6 +265,16 @@ public class FusePuzzleInteraction : MonoBehaviour
         occupants[slotIndex] = fuseIndex;
     }
 
+    private void CompleteRepairIfReady()
+    {
+        if (!faultActive || cooling == null || !cooling.IsPowered) return;
+        for (int i = 0; i < solution.Length; i++)
+            if (occupants[i] != solution[i]) return;
+        faultActive = false;
+        repaired = true;
+        ClearSelection();
+        message = "Circuit restored. Repair complete.";
+    }
     private void TestCircuit()
     {
         if (!cooling.IsPowered)

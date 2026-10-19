@@ -148,6 +148,13 @@ public class LeakRepairInteraction : MonoBehaviour
             valveRotating = true;
         }
         valveClosed = !valveClosed;
+        if (faultActive && clampInstalled && !valveClosed)
+        {
+            repaired = true;
+            faultActive = false;
+            message = "No leakage detected. Repair complete.";
+            return;
+        }
 
         if (valveClosed)
         {
@@ -160,7 +167,7 @@ public class LeakRepairInteraction : MonoBehaviour
         else
         {
             message = faultActive
-                ? "V1 OPEN. Recheck the repaired joint."
+                ? "V1 OPEN. Pipe repair pending."
                 : "V1 OPEN. Pipe system normal.";
         }
     }
@@ -229,13 +236,13 @@ public class LeakRepairInteraction : MonoBehaviour
             clampInstalled = true;
             sealingClamp.SetActive(true);
 
-            message = "Clamp installed. Reopen V1, then recheck.";
+            message = "Clamp installed. Reopen V1 to complete the repair.";
             return;
         }
 
         if (valveClosed)
         {
-            message = "Reopen V1 before checking the seal.";
+            message = "Reopen V1 to complete the repair.";
             return;
         }
 
@@ -261,7 +268,7 @@ public class LeakRepairInteraction : MonoBehaviour
         string status = !faultActive
             ? "NORMAL"
             : clampInstalled
-                ? "AWAITING VERIFICATION"
+                ? "REOPEN V1"
                 : "FAULT";
 
         GUILayout.Label($"Status: {status}");
