@@ -442,6 +442,7 @@ public class GameMenuController : MonoBehaviour
         if (modePanel == null)
         {
             modePanel = CreateMenuOverlay("ModeSelection", out Transform content);
+            content.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
             AddLabel(content, "SELECT MODE", 40, 65);
             AddLabel(content, "", 24, 135);
             modeDescription = content.GetChild(content.childCount - 1).GetComponent<Text>();
