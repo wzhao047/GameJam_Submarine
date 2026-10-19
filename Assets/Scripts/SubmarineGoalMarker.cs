@@ -22,7 +22,7 @@ public class SubmarineGoalMarker : MonoBehaviour
         new Color(1f, 0.75f, 0.25f);
 
     public float directionSize = 24f;
-    public float targetSize = 16f;
+    public float targetSize = 24f;
     public float imageRotationOffset = 0f;
 
     [Header("»ºÂýÃ÷°µ±ä»¯")]
@@ -160,7 +160,7 @@ public class SubmarineGoalMarker : MonoBehaviour
 
         bool visible =
             sonar != null &&
-            sonar.IsWorking &&
+            (VoyageModeSession.Current == null || VoyageModeSession.Current.Mode != VoyageMode.Endless) &&
             sonar.sonarScreen != null &&
             sonar.sonarScreen.isActiveAndEnabled;
 

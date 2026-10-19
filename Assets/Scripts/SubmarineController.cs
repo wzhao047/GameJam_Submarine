@@ -46,6 +46,7 @@ public class SubmarineController : MonoBehaviour
 
     private Vector2 navigationPosition;
     private SubmarinePower power;
+    private SubmarineHull hull;
 
     private readonly string[] gearNames =
     {
@@ -68,6 +69,7 @@ public class SubmarineController : MonoBehaviour
     private void Awake()
     {
         power = GetComponent<SubmarinePower>();
+        hull = GetComponent<SubmarineHull>();
         depth = Mathf.Max(0f, startingDepth);
     }
 
@@ -151,7 +153,8 @@ public class SubmarineController : MonoBehaviour
     {
         bool propulsionAvailable = power != null && power.HasPower;
 
-        float targetSpeed = propulsionAvailable ? GetGearSpeed() : 0f;
+        float targetSpeed = propulsionAvailable ? GetGearSpeed() : (gear > 0 ? lowSpeed : 0f);
+        if (hull != null && hull.IsScrapingReef) targetSpeed *= 0.4f;
 
         currentSpeed = Mathf.MoveTowards(
             currentSpeed,
@@ -169,17 +172,7 @@ public class SubmarineController : MonoBehaviour
             turnAcceleration * deltaTime
         );
 
-        heading = Mathf.Clamp(
-            heading + turnSpeed * deltaTime,
-            -maxHeadingAngle,
-            maxHeadingAngle
-        );
-
-        if ((heading >= maxHeadingAngle && turnSpeed > 0f) ||
-            (heading <= -maxHeadingAngle && turnSpeed < 0f))
-        {
-            turnSpeed = 0f;
-        }
+        heading = Mathf.Repeat(heading + turnSpeed * deltaTime + 180f, 360f) - 180f;
 
         float radians = heading * Mathf.Deg2Rad;
 

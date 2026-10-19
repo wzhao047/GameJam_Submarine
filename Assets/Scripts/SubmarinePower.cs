@@ -17,6 +17,7 @@ public class SubmarinePower : MonoBehaviour
     [Header("ÉùÄÅ¹©µç")]
     public bool sonarSwitch = true;
 
+    public event System.Action<float> BatteryCollected;
     private float battery;
     private SubmarineController controller;
 
@@ -36,8 +37,17 @@ public class SubmarinePower : MonoBehaviour
         controller = GetComponent<SubmarineController>();
     }
 
+    public void ResetForMode() { battery = Mathf.Max(0f, batteryCapacity); }
+    public void AddBattery(float percentage)
+    {
+        if (!isActiveAndEnabled || percentage <= 0f) return;
+        float before = BatteryPercentage;
+        battery = Mathf.Min(batteryCapacity, battery + batteryCapacity * percentage / 100f);
+        BatteryCollected?.Invoke(BatteryPercentage - before);
+    }
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked || Time.timeScale <= 0f) return;
         battery = Mathf.Max(
             0f,
             battery - GetTotalDrain() * Time.deltaTime

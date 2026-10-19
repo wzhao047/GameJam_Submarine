@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
+[DefaultExecutionOrder(600)]
 public class SubmarineOxygenDisplay : MonoBehaviour
 {
     [Header("已有氧气系统")]
@@ -36,6 +37,13 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     public Vector2 pickupOffset = Vector2.zero;
     [Tooltip("How far the notification floats upward in UI reference pixels.")]
     public float pickupRiseDistance = 30f;
+    [Tooltip("Follow the upper-right corner of the oxygen/battery instrument.")]
+    public bool followInstrument = true;
+    private readonly Vector3[] instrumentCorners = new Vector3[4];
+    private SubmarinePower power;
+    private Camera instrumentCamera;
+    private float batteryPickupTimer;
+    private TextMeshProUGUI batteryPickupLabel;
     private bool previewingPickup;
     private float pickupTimer;
     private GameObject feedbackRoot;
@@ -55,7 +63,12 @@ public class SubmarineOxygenDisplay : MonoBehaviour
             return;
         }
 
+        power = oxygen.GetComponent<SubmarinePower>();
+        Canvas instrumentCanvas = oxygenText.canvas;
+        instrumentCamera = instrumentCanvas != null && instrumentCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+            ? null : instrumentCanvas != null && instrumentCanvas.worldCamera != null ? instrumentCanvas.worldCamera : Camera.main;
         CreatePickupFeedback();
+        if (power != null) power.BatteryCollected += ShowBatteryPickupFeedback;
         oxygen.OxygenCollected += ShowPickupFeedback;
         RefreshDisplay();
     }
@@ -63,8 +76,27 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     private void Update()
     {
         pickupTimer = Mathf.Max(0f, pickupTimer - (previewingPickup ? Time.unscaledDeltaTime : Time.deltaTime));
-        AnimatePickupFeedback();
+        batteryPickupTimer = Mathf.Max(0f, batteryPickupTimer - (previewingPickup ? Time.unscaledDeltaTime : Time.deltaTime));
         RefreshDisplay();
+    }
+
+    private void LateUpdate() { AnimatePickupFeedback(); }
+
+    [ContextMenu("Preview Battery Pickup (Play Mode)")]
+    public void PreviewBatteryPickupFeedback()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || batteryPickupLabel == null) return;
+        ShowBatteryPickupFeedback(25f);
+        previewingPickup = true;
+    }
+
+    private void ShowBatteryPickupFeedback(float restored)
+    {
+        if (!isActiveAndEnabled || batteryPickupLabel == null) return;
+        previewingPickup = false;
+        batteryPickupTimer = Mathf.Max(0.1f, pickupFeedbackDuration);
+        batteryPickupLabel.text = restored > 0.01f ? $"BATTERY +{restored:0.#}%" : "BATTERY FULL";
+        AnimatePickupFeedback();
     }
 
     [ContextMenu("Preview Oxygen Pickup (Play Mode)")]
@@ -90,14 +122,19 @@ public class SubmarineOxygenDisplay : MonoBehaviour
         labelObject.transform.SetParent(feedbackRoot.transform, false);
         pickupLabel = labelObject.GetComponent<TextMeshProUGUI>();
         pickupLabel.font = oxygenText.font;
-        pickupLabel.fontSize = 32f;
+        pickupLabel.fontSize = 24f;
         pickupLabel.fontStyle = FontStyles.Bold;
-        pickupLabel.alignment = TextAlignmentOptions.Center;
+        pickupLabel.alignment = TextAlignmentOptions.BottomLeft;
         pickupLabel.raycastTarget = false;
         RectTransform rect = pickupLabel.rectTransform;
         rect.anchorMin = rect.anchorMax = pickupAnchor;
         rect.anchoredPosition = pickupOffset;
-        rect.sizeDelta = new Vector2(600f, 70f);
+        rect.pivot = Vector2.zero;
+        rect.sizeDelta = new Vector2(320f, 36f);
+        var batteryObject = Instantiate(labelObject, feedbackRoot.transform);
+        batteryObject.name = "Battery Pickup Text";
+        batteryPickupLabel = batteryObject.GetComponent<TextMeshProUGUI>();
+        batteryPickupLabel.text = "";
         feedbackRoot.SetActive(false);
     }
 
@@ -116,31 +153,56 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     private void AnimatePickupFeedback()
     {
         if (pickupLabel == null) return;
-        if (pickupTimer <= 0f)
+        bool visible = (pickupTimer > 0f || batteryPickupTimer > 0f)
+            && (previewingPickup || !GameMenuController.IsInputBlocked);
+        Vector2 anchorPosition = pickupOffset;
+        if (followInstrument && visible)
         {
-            feedbackRoot.SetActive(false);
-            return;
+            oxygenText.rectTransform.GetWorldCorners(instrumentCorners);
+            Vector2 screenPoint = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            foreach (Vector3 corner in instrumentCorners)
+            {
+                if (instrumentCamera != null && instrumentCamera.WorldToScreenPoint(corner).z <= 0f)
+                { visible = false; break; }
+                Vector2 projected = RectTransformUtility.WorldToScreenPoint(instrumentCamera, corner);
+                screenPoint = Vector2.Max(screenPoint, projected);
+            }
+            visible &= screenPoint.x >= 0f && screenPoint.x <= Screen.width
+                && screenPoint.y >= 0f && screenPoint.y <= Screen.height;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                (RectTransform)feedbackRoot.transform, screenPoint, null, out anchorPosition);
+            anchorPosition += new Vector2(12f, 12f) + pickupOffset;
         }
-        float progress = 1f - pickupTimer / Mathf.Max(0.1f, pickupFeedbackDuration);
-        float eased = 1f - (1f - progress) * (1f - progress);
-        pickupLabel.rectTransform.anchorMin = pickupLabel.rectTransform.anchorMax = pickupAnchor;
-        pickupLabel.rectTransform.anchoredPosition = pickupOffset + Vector2.up * (eased * pickupRiseDistance);
-        pickupLabel.rectTransform.localScale = Vector3.one *
-            (1f + 0.15f * Mathf.Clamp01(1f - progress * 5f));
-        Color tint = pickupColor;
-        tint.a *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, progress));
-        pickupLabel.color = tint;
+        feedbackRoot.SetActive(visible);
+        if (!visible) return;
+        AnimateLabel(pickupLabel, pickupTimer, anchorPosition, pickupColor);
+        AnimateLabel(batteryPickupLabel, batteryPickupTimer, anchorPosition + Vector2.up * 48f,
+            new Color(1f, 0.7f, 0.25f));
     }
 
+    private void AnimateLabel(TextMeshProUGUI label, float remaining, Vector2 position, Color tint)
+    {
+        label.gameObject.SetActive(remaining > 0f);
+        if (remaining <= 0f) return;
+        float progress = 1f - remaining / Mathf.Max(0.1f, pickupFeedbackDuration);
+        float eased = 1f - (1f - progress) * (1f - progress);
+        label.rectTransform.anchorMin = label.rectTransform.anchorMax = followInstrument ? new Vector2(0.5f, 0.5f) : pickupAnchor;
+        label.rectTransform.anchoredPosition = position + Vector2.up * (eased * pickupRiseDistance);
+        label.rectTransform.localScale = Vector3.one;
+        tint.a *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, progress));
+        label.color = tint;
+    }
     private void OnDisable()
     {
         pickupTimer = 0f;
+        batteryPickupTimer = 0f;
         if (feedbackRoot != null) feedbackRoot.SetActive(false);
     }
 
     private void OnDestroy()
     {
         if (oxygen != null) oxygen.OxygenCollected -= ShowPickupFeedback;
+        if (power != null) power.BatteryCollected -= ShowBatteryPickupFeedback;
         if (feedbackRoot != null) Destroy(feedbackRoot);
     }
     private void RefreshDisplay()
@@ -149,7 +211,7 @@ public class SubmarineOxygenDisplay : MonoBehaviour
             ? calibrationPercentage
             : oxygen.OxygenPercentage;
 
-        percentage = Mathf.Clamp(percentage, 0f, 100f);
+        percentage = Mathf.Max(0f, percentage);
 
         int displayedPercentage =
             Mathf.CeilToInt(percentage);

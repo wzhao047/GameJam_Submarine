@@ -103,6 +103,12 @@ public class SubmarineHull : MonoBehaviour
 
 
     private int collisionCount;
+    private float safeSeconds;
+    private float damageProtectionUntil;
+    private bool touchingHazard;
+    public int TotalCollisions { get; private set; }
+    public bool IsScrapingReef => touchingReef;
+    public float LastDamageTime { get; private set; } = -100f;
 
     private bool failed;
 
@@ -231,6 +237,7 @@ public class SubmarineHull : MonoBehaviour
 
 
         UpdateReefContact();
+        UpdateRecovery();
         UpdateCameraShake();
 
         UpdateCabinLight();
@@ -265,6 +272,7 @@ public class SubmarineHull : MonoBehaviour
 
     private void CheckCollision()
     {
+        touchingHazard = false;
         Vector3 currentPosition = GetPosition();
 
         if (ocean.isActiveAndEnabled && ocean.Ready)
@@ -287,7 +295,7 @@ public class SubmarineHull : MonoBehaviour
             if (failed) return;
 
             if (item == null || !item.isActiveAndEnabled ||
-                !item.CanDamage)
+                !item.Active)
                 continue;
 
             bool touched;
@@ -306,7 +314,7 @@ public class SubmarineHull : MonoBehaviour
                 Vector3 end = currentPosition - item.position;
                 // Sonar rewards use the displayed X/Z plane: hidden depth must
                 // not prevent collection when the marker reaches the submarine.
-                if (item.kind == RepairContactKind.OxygenCanister)
+                if (item.kind == RepairContactKind.OxygenCanister || item.kind == RepairContactKind.Battery)
                 {
                     start.y = 0f;
                     end.y = 0f;
@@ -325,8 +333,10 @@ public class SubmarineHull : MonoBehaviour
                     <= radius * radius;
             }
 
-            if (!touched) continue;
-            if (item.kind == RepairContactKind.OxygenCanister &&
+            if (!touched) { item.ResetHitAfterSeparation(); continue; }
+            if (item.kind == RepairContactKind.Rock || item.kind == RepairContactKind.Reef) touchingHazard = true;
+            if (!item.CanDamage) continue;
+            if ((item.kind == RepairContactKind.OxygenCanister || item.kind == RepairContactKind.Battery) &&
                 (GameMenuController.IsInputBlocked || Time.timeScale <= 0f ||
                  oxygen == null || !oxygen.isActiveAndEnabled || oxygen.HasFailed))
                 continue;
@@ -334,9 +344,14 @@ public class SubmarineHull : MonoBehaviour
             // 每次生成的同一个目标只触发一次反馈。
             item.RegisterHit();
 
-            if (item.kind == RepairContactKind.OxygenCanister)
+            if (item.kind == RepairContactKind.OxygenCanister || item.kind == RepairContactKind.Battery)
             {
-                if (oxygen != null) oxygen.AddOxygen(ocean.oxygenRestoreSeconds);
+                if (item.kind == RepairContactKind.Battery)
+                {
+                    if (power != null) power.AddBattery(25f);
+                    VoyageModeSession.Current?.CollectedBattery();
+                }
+                else if (oxygen != null) oxygen.AddOxygen(ocean.oxygenRestoreSeconds);
                 item.Deactivate();
             }
             else if (item.kind == RepairContactKind.Fish)
@@ -559,6 +574,11 @@ public class SubmarineHull : MonoBehaviour
 
 
 
+        if (GameMenuController.IsInputBlocked || Time.timeScale <= 0f || Time.time < damageProtectionUntil) return;
+        LastDamageTime = Time.time;
+        damageProtectionUntil = Time.time + 2f;
+        safeSeconds = 0f;
+        TotalCollisions++;
         collisionCount = Mathf.Min(3, collisionCount + 1);
 
 
@@ -595,6 +615,18 @@ public class SubmarineHull : MonoBehaviour
 
 
 
+    private void UpdateRecovery()
+    {
+        var mode = VoyageModeSession.Current;
+        if (failed || mode == null || mode.Profile.healSeconds <= 0f || collisionCount == 0
+            || GameMenuController.IsInputBlocked || controller == null || !controller.isActiveAndEnabled) return;
+        if (touchingReef || touchingHazard) { safeSeconds = 0f; return; }
+        safeSeconds += Time.deltaTime;
+        if (safeSeconds < mode.Profile.healSeconds) return;
+        safeSeconds = 0f;
+        collisionCount--;
+        mode.ReportHullRecovery();
+    }
     private void UpdateCabinLight()
 
     {

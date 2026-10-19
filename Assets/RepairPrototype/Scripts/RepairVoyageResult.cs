@@ -119,6 +119,7 @@ public class RepairVoyageResult : MonoBehaviour
 
     private bool HasArrived()
     {
+        if (VoyageModeSession.Current != null && VoyageModeSession.Current.Mode == VoyageMode.Endless) return false;
         Vector3 goal = goalMarker.GoalPosition;
         Vector2 position = controller.NavigationPosition;
 
@@ -210,6 +211,15 @@ public class RepairVoyageResult : MonoBehaviour
                 source.Stop();
         }
 
+        var menu = FindAnyObjectByType<GameMenuController>();
+        var mode = VoyageModeSession.Current;
+        string summary = mode != null ? mode.Finish(success) : $"Voyage time: {elapsed:F0}s";
+        if (menu != null)
+        {
+            resultPanel.SetActive(false);
+            menu.ShowResultMenu((success ? "VOYAGE COMPLETE" : "VOYAGE FAILED") + "\n" + cause + "\n\n" + summary);
+            return;
+        }
         resultPanel.SetActive(true);
         resultPanel.transform.SetAsLastSibling();
     }

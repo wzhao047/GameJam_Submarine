@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class SubmarineSonar : MonoBehaviour
@@ -393,7 +393,7 @@ public class SubmarineSonar : MonoBehaviour
     {
         if (!fadeSafeObstacles ||
             echo.kind == RepairContactKind.Fish ||
-            echo.kind == RepairContactKind.OxygenCanister)
+            echo.kind == RepairContactKind.OxygenCanister || echo.kind == RepairContactKind.Battery)
         {
             return 1f;
         }
@@ -665,6 +665,8 @@ public class SubmarineSonar : MonoBehaviour
 
         Color tint = echo.kind == RepairContactKind.Fish
             ? fishColor
+            : echo.kind == RepairContactKind.Battery
+                ? new Color(1f, 0.5f, 0.08f)
             : echo.kind == RepairContactKind.OxygenCanister
                 ? oxygenCanisterColor
                 : rockColor;

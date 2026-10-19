@@ -12,6 +12,17 @@ public class GameMenuController : MonoBehaviour
 {
     public GameObject startPanel;
     public GameObject pausePanel;
+    private GameObject modePanel;
+    private GameObject resultMenu;
+    private VoyageMode pendingMode;
+    private Text modeDescription;
+    private Text modeConfirmation;
+    private bool ended;
+
+    private void Awake()
+    {
+        if (VoyageModeSession.Current == null) gameObject.AddComponent<VoyageModeSession>();
+    }
 
     [Header("Menu text (edit GameMenuDefaults prefab outside Play Mode)")]
     [TextArea(1, 3)] public string gameTitle = "RESIDUAL\nPRESSURE";
@@ -49,12 +60,12 @@ public class GameMenuController : MonoBehaviour
 
     private void HideGameplayUI()
     {
-        foreach (var view in Object.FindObjectsByType<RepairStationView>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var view in Object.FindObjectsByType<RepairStationView>(FindObjectsInactive.Include))
         {
             if (view.leftButton != null) HideForStartMenu(view.leftButton.gameObject);
             if (view.rightButton != null) HideForStartMenu(view.rightButton.gameObject);
         }
-        foreach (var tutorial in Object.FindObjectsByType<TutorialOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var tutorial in Object.FindObjectsByType<TutorialOverlay>(FindObjectsInactive.Include))
         {
             tutorial.HideTutorial();
             HideForStartMenu(tutorial.openTutorialUI);
@@ -133,7 +144,7 @@ public class GameMenuController : MonoBehaviour
 
     private bool started;
     private bool paused;
-    private static Font menuFont;
+    private Font menuFont;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterMenus()
@@ -235,6 +246,7 @@ public class GameMenuController : MonoBehaviour
         AddButton(content.transform, isPause ? resumeLabel : startLabel,
             isPause ? (UnityEngine.Events.UnityAction)ResumeGame : StartGame);
         if (isPause) AddButton(content.transform, restartLabel, RestartGame);
+        AddButton(content.transform, "MODE", ShowModeSelection);
         AddButton(content.transform, quitLabel, QuitGame);
         return panel;
     }
@@ -316,12 +328,15 @@ public class GameMenuController : MonoBehaviour
         pausePanel.SetActive(false);
         SetPaused(true);
         FocusPanel(startPanel);
+        if (VoyageModeSession.AutoStartAfterReload)
+        {
+            VoyageModeSession.AutoStartAfterReload = false;
+            StartGame();
+        }
     }
 
     private void Update()
     {
-        if (!started) return;
-
 #if ENABLE_INPUT_SYSTEM
         bool escapePressed =
             Keyboard.current != null &&
@@ -329,7 +344,8 @@ public class GameMenuController : MonoBehaviour
 #else
         bool escapePressed = Input.GetKeyDown(KeyCode.Escape);
 #endif
-
+        if (escapePressed && modePanel != null && modePanel.activeSelf) { CancelModeSelection(); return; }
+        if (!started || ended) return;
         if (escapePressed)
         {
             if (paused)
@@ -347,6 +363,8 @@ public class GameMenuController : MonoBehaviour
         RestoreGameplayUI();
         startPanel.SetActive(false);
         ResumeGame();
+        foreach (var tutorial in Object.FindObjectsByType<TutorialOverlay>())
+            tutorial.ShowOnFirstVoyage();
     }
 
     public void PauseGame()
@@ -360,7 +378,7 @@ public class GameMenuController : MonoBehaviour
 
     public void ResumeGame()
     {
-        if (!started) return;
+        if (!started || ended || (modePanel != null && modePanel.activeSelf)) return;
 
         pausePanel.SetActive(false);
         SetPaused(false);
@@ -393,6 +411,105 @@ public class GameMenuController : MonoBehaviour
 #endif
     }
 
+    private Transform MenuCanvas => startPanel.transform.parent;
+
+    private GameObject CreateMenuOverlay(string name, out Transform content)
+    {
+        var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(MenuCanvas, false);
+        var rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        panel.GetComponent<Image>().color = new Color(0.012f, 0.02f, 0.018f, 0.98f);
+        var column = new GameObject("Options", typeof(RectTransform), typeof(VerticalLayoutGroup));
+        column.transform.SetParent(panel.transform, false);
+        var layoutRect = column.GetComponent<RectTransform>();
+        layoutRect.anchorMin = new Vector2(0.2f, 0.08f);
+        layoutRect.anchorMax = new Vector2(0.8f, 0.92f);
+        layoutRect.offsetMin = layoutRect.offsetMax = Vector2.zero;
+        var layout = column.GetComponent<VerticalLayoutGroup>();
+        layout.spacing = 10;
+        layout.childControlHeight = true;
+        layout.childForceExpandHeight = false;
+        content = column.transform;
+        return panel;
+    }
+
+    public void ShowModeSelection()
+    {
+        pendingMode = VoyageModeSession.Selected;
+        if (modePanel == null)
+        {
+            modePanel = CreateMenuOverlay("ModeSelection", out Transform content);
+            AddLabel(content, "SELECT MODE", 40, 65);
+            AddLabel(content, "", 24, 135);
+            modeDescription = content.GetChild(content.childCount - 1).GetComponent<Text>();
+            for (int i = 0; i < 3; i++)
+            {
+                VoyageMode choice = (VoyageMode)i;
+                AddButton(content, VoyageModeSession.Name(choice), () => { pendingMode = choice; RefreshModeSelection(); });
+            }
+            AddButton(content, "", ConfirmModeSelection);
+            modeConfirmation = content.GetChild(content.childCount - 1).GetComponentInChildren<Text>();
+            AddButton(content, "CANCEL", CancelModeSelection);
+        }
+        modePanel.SetActive(true);
+        startPanel.SetActive(false);
+        pausePanel.SetActive(false);
+        if (resultMenu != null) resultMenu.SetActive(false);
+        modePanel.transform.SetAsLastSibling();
+        RefreshModeSelection();
+        var options = modePanel.GetComponentsInChildren<Button>();
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(options[(int)pendingMode].gameObject);
+    }
+
+    private void RefreshModeSelection()
+    {
+        var options = modePanel.GetComponentsInChildren<Button>();
+        for (int i = 0; i < 3; i++)
+            options[i].GetComponent<SubmarineMenuOptionVisual>().SetModeChoice(i == (int)pendingMode);
+        string detail = pendingMode == VoyageMode.Easy
+            ? "More oxygen, fewer obstacles, and automatic hull recovery."
+            : pendingMode == VoyageMode.Hard
+            ? "Less oxygen, more obstacles, and more frequent repairs."
+            : "Survive as long as you can as the danger grows.";
+        modeDescription.text = "SELECTED: " + VoyageModeSession.Name(pendingMode) + "\n" + detail
+            + (started ? "\nChanging mode restarts the voyage." : "");
+        modeConfirmation.text = started ? "CONFIRM & RESTART" : "CONFIRM";
+    }
+
+    private void ConfirmModeSelection()
+    {
+        VoyageModeSession.Select(pendingMode);
+        VoyageModeSession.AutoStartAfterReload = started;
+        RestartGame();
+    }
+
+    private void CancelModeSelection()
+    {
+        modePanel.SetActive(false);
+        if (ended) resultMenu.SetActive(true);
+        else if (started) pausePanel.SetActive(true);
+        else startPanel.SetActive(true);
+        FocusPanel(ended ? resultMenu : started ? pausePanel : startPanel);
+    }
+
+    public void ShowResultMenu(string summary)
+    {
+        if (resultMenu != null) Destroy(resultMenu);
+        ended = true;
+        startPanel.SetActive(false);
+        pausePanel.SetActive(false);
+        if (modePanel != null) modePanel.SetActive(false);
+        resultMenu = CreateMenuOverlay("VoyageResults", out Transform content);
+        AddLabel(content, summary, 28, 400);
+        AddButton(content, "RETRY", () => { VoyageModeSession.AutoStartAfterReload = true; RestartGame(); });
+        AddButton(content, "SELECT MODE", ShowModeSelection);
+        AddButton(content, quitLabel, QuitGame);
+        SetPaused(true);
+        FocusPanel(resultMenu);
+    }
+
     private void SetPaused(bool value)
     {
         paused = value;
@@ -404,6 +521,7 @@ public class GameMenuController : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (menuFont != null) Destroy(menuFont);
         RestoreGameplayUI();
         RestoreGameplayCamera();
         IsStartMenuVisible = false;
@@ -423,6 +541,15 @@ public sealed class SubmarineMenuOptionVisual : MonoBehaviour,
     public Color focusColor;
     public Color accentColor;
     private bool selected;
+    private bool modeOption;
+    private bool chosen;
+
+    public void SetModeChoice(bool value)
+    {
+        modeOption = true;
+        chosen = value;
+        Refresh();
+    }
 
     private void OnEnable() { Refresh(); }
     private void OnDisable() { selected = false; }
@@ -435,11 +562,11 @@ public sealed class SubmarineMenuOptionVisual : MonoBehaviour,
     public void OnDeselect(BaseEventData data) { selected = false; Refresh(); }
     public void Refresh()
     {
-        if (label != null) label.color = selected
+        if (label != null) label.color = (selected || chosen)
             ? focusColor : normalColor;
         if (arrow != null)
         {
-            arrow.SetActive(selected);
+            arrow.SetActive(modeOption ? chosen : selected);
             arrow.GetComponent<Text>().color = accentColor;
         }
         if (underline != null) underline.SetActive(selected);

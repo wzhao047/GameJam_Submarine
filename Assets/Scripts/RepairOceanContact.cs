@@ -5,6 +5,7 @@ public enum RepairContactKind
     Rock,       // 普通岩石
     Fish,       // 鱼群
     OxygenCanister = 3,
+    Battery = 4,
     Reef = 2    // 大型海底礁石
 }
 
@@ -70,6 +71,7 @@ public class RepairOceanContact : MonoBehaviour
         HitRegistered?.Invoke(this);
     }
 
+    public void ResetHitAfterSeparation() { hitRegistered = false; }
     public void Deactivate()
     {
         active = false;

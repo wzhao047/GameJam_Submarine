@@ -1,0 +1,20 @@
+{
+  "easy": {
+    "oxygenSeconds": 300, "oxygenPickupSeconds": 25, "batteryMinutes": 12, "goalCruiseSeconds": 330,
+    "rockInterval": 20, "fishInterval": 12, "reefInterval": 40, "oxygenInterval": 38,
+    "faultGrace": 60, "faultMinimum": 85, "faultMaximum": 110, "repairCooldown": 150,
+    "maxFaults": 1, "healSeconds": 90
+  },
+  "hard": {
+    "oxygenSeconds": 240, "oxygenPickupSeconds": 20, "batteryMinutes": 10, "goalCruiseSeconds": 285,
+    "rockInterval": 12, "fishInterval": 7, "reefInterval": 26, "oxygenInterval": 30,
+    "faultGrace": 30, "faultMinimum": 45, "faultMaximum": 65, "repairCooldown": 100,
+    "maxFaults": 2, "healSeconds": 0
+  },
+  "endless": {
+    "oxygenSeconds": 360, "oxygenPickupSeconds": 25, "batteryMinutes": 6, "goalCruiseSeconds": 0,
+    "rockInterval": 20, "fishInterval": 12, "reefInterval": 40, "oxygenInterval": 38,
+    "faultGrace": 60, "faultMinimum": 85, "faultMaximum": 110, "repairCooldown": 150,
+    "maxFaults": 1, "healSeconds": 0
+  }
+}

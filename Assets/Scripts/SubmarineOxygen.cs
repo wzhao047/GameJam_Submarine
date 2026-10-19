@@ -34,14 +34,20 @@ public class SubmarineOxygen : MonoBehaviour
     {
         if (failed || !isActiveAndEnabled || seconds <= 0f) return 0f;
         float previous = oxygenRemaining;
-        oxygenRemaining = Mathf.Min(Mathf.Max(0f, oxygenDuration), oxygenRemaining + seconds);
+        oxygenRemaining += seconds;
         float restored = oxygenRemaining - previous;
         OxygenCollected?.Invoke(restored);
         return restored;
     }
+    public void ResetForMode(float seconds)
+    {
+        oxygenDuration = Mathf.Max(1f, seconds);
+        oxygenRemaining = oxygenDuration;
+        failed = false;
+    }
     private void Update()
     {
-        if (failed)
+        if (failed || GameMenuController.IsInputBlocked || Time.timeScale <= 0f)
             return;
 
         // 停车、切换位置、维修时都继续消耗。

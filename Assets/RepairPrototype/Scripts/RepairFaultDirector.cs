@@ -52,7 +52,6 @@ public class RepairFaultDirector : MonoBehaviour
         TrackRecovery(1, cooling.HasFault);
         TrackRecovery(2, fuse.HasFault);
         remainingTime -= Time.deltaTime;
-
         if (remainingTime > 0f)
             return;
 
@@ -64,15 +63,19 @@ public class RepairFaultDirector : MonoBehaviour
 
     private void TryTriggerFault()
     {
+        var mode = VoyageModeSession.Current;
+        int active = (leak.HasFault ? 1 : 0) + (cooling.HasFault ? 1 : 0) + (fuse.HasFault ? 1 : 0);
+        if (mode != null && (!mode.FaultSafeToStart || active >= mode.MaximumFaults || mode.Elapsed < mode.Profile.faultGrace)) return;
+        // Fuse and cooling failures both impair propulsion; do not stack them.
         candidates.Clear();
 
         if (leak.CanTriggerFault && cooldownRemaining[0] <= 0f)
             candidates.Add(0);
 
-        if (cooling.CanTriggerFault && cooldownRemaining[1] <= 0f)
+        if (!fuse.HasFault && cooling.CanTriggerFault && cooldownRemaining[1] <= 0f)
             candidates.Add(1);
 
-        if (fuse.CanTriggerFault && cooldownRemaining[2] <= 0f)
+        if (!cooling.HasFault && fuse.CanTriggerFault && cooldownRemaining[2] <= 0f)
             candidates.Add(2);
 
         // 全部设备都在故障或等待复查时，本次不再叠加。

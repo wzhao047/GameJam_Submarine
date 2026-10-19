@@ -9,6 +9,7 @@ using UnityEngine.InputSystem;
 [DisallowMultipleComponent, RequireComponent(typeof(Canvas), typeof(CanvasGroup))]
 public sealed class TutorialOverlay : MonoBehaviour
 {
+    public const string FirstVisitPreferenceKey = "Voyage.TutorialSeen.v1";
     [Header("Station camera")]
     public RepairStationView stationView;
     [Header("Authored UI objects")]
@@ -88,6 +89,27 @@ public sealed class TutorialOverlay : MonoBehaviour
         panel.SetActive(true);
         shownStation = stationView.CurrentStationIndex;
     }
+
+    public void ShowOnFirstVoyage()
+    {
+        if (PlayerPrefs.GetInt(FirstVisitPreferenceKey, 0) != 0) return;
+        ResolveStation();
+        BindStation();
+        if (!IsTutorialVisible) ToggleTutorial();
+        // Only remember the visit if a valid tutorial actually opened.
+        if (!IsTutorialVisible) return;
+        PlayerPrefs.SetInt(FirstVisitPreferenceKey, 1);
+        PlayerPrefs.Save();
+    }
+
+#if UNITY_EDITOR
+    [ContextMenu("Reset First Visit Tutorial")]
+    private void ResetFirstVisitTutorial()
+    {
+        PlayerPrefs.DeleteKey(FirstVisitPreferenceKey);
+        PlayerPrefs.Save();
+    }
+#endif
 
     public void HideTutorial()
     {
