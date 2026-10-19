@@ -72,6 +72,7 @@ public sealed class TutorialOverlay : MonoBehaviour
 
     public void ToggleTutorial()
     {
+        if (GameMenuController.IsInputBlocked) return;
         if (!isActiveAndEnabled) return;
         if (IsTutorialVisible)
         {

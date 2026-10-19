@@ -244,7 +244,9 @@ public class SubmarineSonar : MonoBehaviour
             BuildEchoes();
 
         bool working = IsWorking;
-        float dt = Time.deltaTime;
+        // Animate the title-screen display while voyage simulation stays paused.
+        // The in-game pause menu still freezes the sweep and its echoes.
+        float dt = GameMenuController.IsStartMenuVisible ? Time.unscaledDeltaTime : Time.deltaTime;
         float previousAngle = scanAngle;
 
         float sweep = working
