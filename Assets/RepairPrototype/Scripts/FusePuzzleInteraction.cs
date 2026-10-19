@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -21,6 +22,15 @@ public class FusePuzzleInteraction : MonoBehaviour
 
     [Header("实体测试按钮")]
     public Transform testButton;
+    [Header("Test knife switch lever")]
+    public Transform testLever;
+    [Tooltip("Local X rotation relative to the resting pose. Reverse the sign if needed.")]
+    public float testLeverPullAngle = 45f;
+    [Min(0.05f)] public float testLeverMoveTime = 0.25f;
+    public AudioClip testLeverClip;
+    private bool pullingTestLever;
+    private Quaternion testLeverRestRotation;
+    private bool testLeverLatched;
 
     [Header("共用电源状态")]
     public RepairCoolingPrototype cooling;
@@ -96,6 +106,12 @@ public class FusePuzzleInteraction : MonoBehaviour
             return;
         }
 
+        if (testLever != null)
+        {
+            testLeverRestRotation = testLever.localRotation;
+            testLeverLatched = true;
+            testLever.localRotation = testLeverRestRotation * Quaternion.AngleAxis(testLeverPullAngle, Vector3.right);
+        }
         homePositions = new Vector3[3];
         originalScales = new Vector3[3];
 
@@ -120,6 +136,11 @@ public class FusePuzzleInteraction : MonoBehaviour
 
         faultActive = true;
         repaired = false;
+        // A fresh fuse fault trips the previously latched test switch.
+        StopAllCoroutines();
+        pullingTestLever = false;
+        testLeverLatched = false;
+        if (testLever != null) testLever.localRotation = testLeverRestRotation;
 
         for (int i = 0; i < 3; i++)
         {
@@ -135,7 +156,7 @@ public class FusePuzzleInteraction : MonoBehaviour
     {
         if (GameMenuController.IsInputBlocked) return;
         if (!ready) return;
-        CompleteRepairIfReady();
+
         if (playerCamera == null) return;
 
         if (selected >= 0 && cooling.IsPowered)
@@ -170,7 +191,7 @@ public class FusePuzzleInteraction : MonoBehaviour
 
         if (Matches(hit.transform, testButton))
         {
-            TestCircuit();
+            PullTestLever();
             return;
         }
 
@@ -283,15 +304,72 @@ public class FusePuzzleInteraction : MonoBehaviour
         occupants[slotIndex] = fuseIndex;
     }
 
-    private void CompleteRepairIfReady()
+    private void PullTestLever()
     {
-        if (!faultActive || cooling == null || !cooling.IsPowered) return;
-        for (int i = 0; i < solution.Length; i++)
-            if (occupants[i] != solution[i]) return;
-        faultActive = false;
-        repaired = true;
-        ClearSelection();
-        message = "Circuit restored. Repair complete.";
+        if (pullingTestLever) return;
+        if (testLever == null)
+        {
+            PlayActionSound(testLeverClip);
+            TestCircuit();
+            return;
+        }
+        if (testLeverLatched && cooling.IsPowered)
+        {
+            message = "Test switch engaged. Switch OFF power before resetting.";
+            return;
+        }
+        StartCoroutine(AnimateTestLever());
+    }
+
+    private IEnumerator AnimateTestLever()
+    {
+        pullingTestLever = true;
+        Transform lever = testLever;
+        if (testLeverLatched)
+        {
+            PlayActionSound(testLeverClip);
+            Quaternion from = lever.localRotation;
+            float resetDuration = Mathf.Max(0.05f, testLeverMoveTime);
+            for (float t = 0f; t < resetDuration; t += Time.deltaTime)
+            {
+                if (lever == null) { pullingTestLever = false; yield break; }
+                lever.localRotation = Quaternion.Slerp(from, testLeverRestRotation,
+                    Mathf.SmoothStep(0f, 1f, t / resetDuration));
+                yield return null;
+            }
+            if (lever != null) lever.localRotation = testLeverRestRotation;
+            testLeverLatched = false;
+            pullingTestLever = false;
+            yield break;
+        }
+        Quaternion pulled = testLeverRestRotation * Quaternion.AngleAxis(testLeverPullAngle, Vector3.right);
+        PlayActionSound(testLeverClip);
+        float duration = Mathf.Max(0.05f, testLeverMoveTime);
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
+        {
+            if (lever == null) { pullingTestLever = false; yield break; }
+            lever.localRotation = Quaternion.Slerp(testLeverRestRotation, pulled,
+                Mathf.SmoothStep(0f, 1f, elapsed / duration));
+            yield return null;
+        }
+        if (lever == null) { pullingTestLever = false; yield break; }
+        lever.localRotation = pulled;
+        TestCircuit();
+        if (cooling.IsPowered && !faultActive)
+        {
+            testLeverLatched = true;
+            pullingTestLever = false;
+            yield break;
+        }
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
+        {
+            if (lever == null) { pullingTestLever = false; yield break; }
+            lever.localRotation = Quaternion.Slerp(pulled, testLeverRestRotation,
+                Mathf.SmoothStep(0f, 1f, elapsed / duration));
+            yield return null;
+        }
+        if (lever != null) lever.localRotation = testLeverRestRotation;
+        pullingTestLever = false;
     }
     private void TestCircuit()
     {
@@ -342,6 +420,12 @@ public class FusePuzzleInteraction : MonoBehaviour
 
     private void OnDisable()
     {
+        StopAllCoroutines();
+        if (pullingTestLever && testLever != null)
+            testLever.localRotation = testLeverLatched
+                ? testLeverRestRotation * Quaternion.AngleAxis(testLeverPullAngle, Vector3.right)
+                : testLeverRestRotation;
+        pullingTestLever = false;
         if (actionSource != null) actionSource.Stop();
     }
 
