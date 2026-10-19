@@ -1,0 +1,32 @@
+Create a high resolution portrait English submarine maintenance job card, using reference 3 as the layout and aged cream paper / fine black technical ink style. References 1 and 2 are equipment appearance references, not backgrounds. Flat full-page printable texture, no perspective, no surrounding desk, crisp readable text, light wear only away from text. Preserve signoff columns and ruled table style. Upper illustrated band: left show horizontal thick pipe with front-facing yellow spoked handwheel V1 and yellow band sealing clamp to its right, plus small open yellow toolbox with wrench; middle show cooling joint and the rectangular fan unit from reference 1, plus green I/O rocker labelled SHARED POWER, I=ON O=OFF; right show open ochre fuse cabinet with three long blue yellow red cartridge fuses in order A B C and separate knife switch test lever below right, matching reference 2. Technical manual drawings, restrained yellow/blue/red/green spot colors. Do not invent alternate valve shape or a pushbutton for TEST.
+Exact text:
+Job Card: S01-M-ALL
+Job Title: SYSTEM FAULT CHECK AND REPAIR
+WARNING: When the master fault lamp lights, inspect all systems. Multiple faults may occur together.
+Illustration labels: V1; PIPE JOINT; SEALING CLAMP; SHARED TOOLBOX; COOLING JOINT; SHARED POWER; I ON / O OFF; A BLUE; B YELLOW; C RED; TEST LEVER.
+Caption: Match slot letters, not your viewing direction.
+Table columns: No. | Procedure | Mech Signoff | Insp Signoff
+A  PIPE LEAK CHECK
+1. Click the leaking pipe joint to inspect it. Check for spray and rising water.
+2. Take the wrench from the shared toolbox if it is not already held.
+3. Close V1. Click the inspected joint again to install the sealing clamp.
+4. Reopen V1 to complete the repair. Confirm that the spray stops.
+B  COOLING CHECK
+5. Check the temperature trend. Click the cooling joint to inspect it.
+6. Switch OFF shared power using the I/O rocker beside the fuse cabinet.
+7. Hold the wrench and click the inspected cooling joint again to repair it.
+8. Restore shared power to complete the repair. Check that temperature falls.
+C  FUSE CIRCUIT CHECK
+9. If the sonar display goes dark, check shared power and the fuse circuit.
+10. Switch OFF shared power. Fit the fuses: A BLUE, B YELLOW, C RED.
+11. Restore shared power, then pull the TEST lever to test the circuit.
+12. If the test fails, switch OFF power before rearranging. A passed test completes repair.
+NOTES
+Inspections and fuse work do not require the wrench.
+The wrench stays in your hand after repairs. Click the toolbox again to return it.
+Closing V1 or switching OFF power only isolates the system; it does not repair it.
+Mark this card manually. Crossing out a step does not repair the equipment.
+The master fault lamp goes out only after all active faults are repaired.
+Result: [empty checkbox] Normal   [empty checkbox] Recheck
+Page 1 / 1
+Keep all 12 rows legible, no omitted text, no duplicate rows. Use generous width for procedure text and narrow blank signoff columns. English only.

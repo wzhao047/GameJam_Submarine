@@ -25,6 +25,12 @@ public class RepairSharedToolbox : MonoBehaviour
     [Min(0.05f)] public float repairMotionDuration = 0.55f;
     public float repairTwistAngle = 35f;
 
+    [Header("Wrench pickup and return sounds")]
+    public AudioClip wrenchPickupClip;
+    public AudioClip wrenchReturnClip;
+    [Range(0f, 1f)] public float wrenchSoundVolume = 0.55f;
+    private AudioSource wrenchAudioSource;
+
     private bool repairMotionPlaying;
     private float repairMotionElapsed;
     private Vector3 repairRestPosition;
@@ -36,6 +42,10 @@ public class RepairSharedToolbox : MonoBehaviour
 
     private void Start()
     {
+        wrenchAudioSource = gameObject.AddComponent<AudioSource>();
+        wrenchAudioSource.playOnAwake = false;
+        wrenchAudioSource.loop = false;
+        wrenchAudioSource.spatialBlend = 0f;
         if (playerCamera == null) playerCamera = Camera.main;
         FindToolVisuals();
         RefreshVisuals();
@@ -184,6 +194,12 @@ public class RepairSharedToolbox : MonoBehaviour
         ResetRepairMotion();
         HasTools = !HasTools;
         RefreshVisuals();
+        AudioClip clip = HasTools ? wrenchPickupClip : wrenchReturnClip;
+        if (clip != null && wrenchAudioSource != null)
+        {
+            wrenchAudioSource.Stop();
+            wrenchAudioSource.PlayOneShot(clip, wrenchSoundVolume);
+        }
     }
 
     private void RefreshVisuals()
@@ -240,10 +256,15 @@ public class RepairSharedToolbox : MonoBehaviour
         repairMotionElapsed = 0f;
     }
 
-    private void OnDisable() { ResetRepairMotion(); }
+    private void OnDisable()
+    {
+        ResetRepairMotion();
+        if (wrenchAudioSource != null) wrenchAudioSource.Stop();
+    }
 
     private void OnDestroy()
     {
+        if (wrenchAudioSource != null) Destroy(wrenchAudioSource);
         ResetRepairMotion();
         if (generatedHeldTool && heldTool != null) Destroy(heldTool);
     }

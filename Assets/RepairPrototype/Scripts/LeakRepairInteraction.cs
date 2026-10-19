@@ -59,7 +59,11 @@ public class LeakRepairInteraction : MonoBehaviour
         sharedToolbox != null && sharedToolbox.HasTools;
 
     [Header("Repair action sounds")]
+    [Tooltip("Fallback used when all random valve sound slots are empty.")]
     public AudioClip valveTurnClip;
+    [Tooltip("Fill the three slots. Each valve turn randomly selects a non-empty clip.")]
+    public AudioClip[] valveTurnClips = new AudioClip[3];
+    private AudioClip lastValveTurnClip;
     public AudioClip clampInstallClip;
     [Range(0f, 1f)] public float actionVolume = 0.55f;
     private AudioSource actionSource;
@@ -134,6 +138,28 @@ public class LeakRepairInteraction : MonoBehaviour
             ToggleValve();
     }
 
+    private void PlayRandomValveSound()
+    {
+        AudioClip chosen = null;
+        int choices = 0;
+        if (valveTurnClips != null)
+        {
+            // Reservoir sampling skips empty slots and avoids the last clip when possible.
+            foreach (AudioClip clip in valveTurnClips)
+            {
+                if (clip == null || clip == lastValveTurnClip) continue;
+                choices++;
+                if (Random.Range(0, choices) == 0) chosen = clip;
+            }
+            if (chosen == null)
+                foreach (AudioClip clip in valveTurnClips)
+                    if (clip != null) { chosen = clip; break; }
+        }
+        if (chosen == null) chosen = valveTurnClip;
+        if (chosen == null) return;
+        lastValveTurnClip = chosen;
+        PlayActionSound(chosen);
+    }
     private void PlayActionSound(AudioClip clip)
     {
         if (clip == null || actionSource == null) return;
@@ -164,7 +190,7 @@ public class LeakRepairInteraction : MonoBehaviour
             valveRotating = true;
         }
         valveClosed = !valveClosed;
-        PlayActionSound(valveTurnClip);
+        PlayRandomValveSound();
         if (faultActive && clampInstalled && !valveClosed)
         {
             repaired = true;
