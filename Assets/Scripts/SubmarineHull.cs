@@ -222,6 +222,7 @@ public class SubmarineHull : MonoBehaviour
             CheckPool(ocean.Rocks, currentPosition);
             CheckPool(ocean.Fish, currentPosition);
             CheckPool(ocean.Reefs, currentPosition);
+            CheckPool(ocean.OxygenCanisters, currentPosition);
         }
 
         previousPosition = currentPosition;
@@ -268,11 +269,20 @@ public class SubmarineHull : MonoBehaviour
             }
 
             if (!touched) continue;
+            if (item.kind == RepairContactKind.OxygenCanister &&
+                (GameMenuController.IsInputBlocked || Time.timeScale <= 0f ||
+                 oxygen == null || !oxygen.isActiveAndEnabled || oxygen.HasFailed))
+                continue;
 
             // 每次生成的同一个目标只触发一次反馈。
             item.RegisterHit();
 
-            if (item.kind == RepairContactKind.Fish)
+            if (item.kind == RepairContactKind.OxygenCanister)
+            {
+                if (oxygen != null) oxygen.AddOxygen(ocean.oxygenRestoreSeconds);
+                item.Deactivate();
+            }
+            else if (item.kind == RepairContactKind.Fish)
             {
                 // 鱼群只震动，不损伤船体，也不停止潜艇。
                 shakeRemaining = Mathf.Max(0f, shakeDuration);

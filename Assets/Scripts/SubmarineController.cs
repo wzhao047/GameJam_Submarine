@@ -84,6 +84,7 @@ public class SubmarineController : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         float diveInput = 0f;
         float turnInput = 0f;
 

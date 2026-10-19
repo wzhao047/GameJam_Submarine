@@ -57,6 +57,7 @@ public class RepairStationView : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
 #if ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -85,6 +86,7 @@ public class RepairStationView : MonoBehaviour
 
     private void ChangeView(int direction)
     {
+        if (GameMenuController.IsInputBlocked) return;
         if (!isActiveAndEnabled) return;
 
         int nextIndex = Mathf.Clamp(currentIndex + direction, 0, 2);

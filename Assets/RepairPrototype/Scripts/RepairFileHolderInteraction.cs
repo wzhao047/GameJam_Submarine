@@ -28,6 +28,7 @@ public class RepairFileHolderInteraction : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         bool clicked = false;
         Vector2 pointerPosition = Vector2.zero;
 
@@ -36,10 +37,22 @@ public class RepairFileHolderInteraction : MonoBehaviour
 
         if (mouse == null) return;
 
+        if (mouse.rightButton.wasPressedThisFrame && paper != null && paper.activeSelf)
+        {
+            paper.SetActive(false);
+            return;
+        }
+
         clicked = mouse.leftButton.wasPressedThisFrame;
         pointerPosition = mouse.position.ReadValue();
 
 #elif ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetMouseButtonDown(1) && paper != null && paper.activeSelf)
+        {
+            paper.SetActive(false);
+            return;
+        }
+
         clicked = Input.GetMouseButtonDown(0);
         pointerPosition = Input.mousePosition;
 #endif

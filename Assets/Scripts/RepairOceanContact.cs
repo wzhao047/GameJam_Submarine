@@ -4,7 +4,8 @@ public enum RepairContactKind
 {
     Rock,       // 普通岩石
     Fish,       // 鱼群
-    Reef        // 大型海底礁石
+    OxygenCanister = 3,
+    Reef = 2    // 大型海底礁石
 }
 
 public class RepairOceanContact : MonoBehaviour

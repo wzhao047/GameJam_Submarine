@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class RepairPaperDrag : MonoBehaviour,
     IBeginDragHandler, IDragHandler
@@ -10,8 +11,34 @@ public class RepairPaperDrag : MonoBehaviour,
     private RectTransform parentRect;
     private Vector2 grabOffset;
 
+    private void Awake()
+    {
+        if (paper == null) paper = transform as RectTransform;
+        if (paper == null) return;
+
+        GameObject hint = new GameObject("CloseHint", typeof(RectTransform),
+            typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+        hint.transform.SetParent(paper, false);
+        RectTransform rect = (RectTransform)hint.transform;
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 8f);
+        rect.sizeDelta = new Vector2(0f, 36f);
+
+        Text label = hint.GetComponent<Text>();
+        label.text = "Right-click to close repair sheet";
+        label.font = Font.CreateDynamicFontFromOSFont(
+            new[] { "Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "Arial" }, 24);
+        label.fontSize = 24;
+        label.alignment = TextAnchor.MiddleCenter;
+        label.color = new Color(0.95f, 0.93f, 0.82f);
+        label.raycastTarget = false;
+        hint.GetComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+    }
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (GameMenuController.IsInputBlocked || eventData.button != PointerEventData.InputButton.Left) return;
         if (paper == null) return;
 
         parentRect = paper.parent as RectTransform;
@@ -33,6 +60,7 @@ public class RepairPaperDrag : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
+        if (GameMenuController.IsInputBlocked || eventData.button != PointerEventData.InputButton.Left) return;
         if (paper == null || parentRect == null) return;
 
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -59,7 +87,7 @@ public class RepairPaperDrag : MonoBehaviour,
         position.y = Mathf.Clamp(
             position.y,
             bounds.yMin - sheet.yMax + 60f,
-            bounds.yMax - sheet.yMax
+            bounds.yMax - sheet.yMax - 44f
         );
 
         paper.localPosition = new Vector3(

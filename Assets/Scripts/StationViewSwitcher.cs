@@ -16,6 +16,7 @@ public class StationViewSwitcher : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
 #if ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;

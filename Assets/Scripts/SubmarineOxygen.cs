@@ -19,6 +19,7 @@ public class SubmarineOxygen : MonoBehaviour
             : 0f;
 
     public bool HasFailed => failed;
+    public event System.Action<float> OxygenCollected;
 
     private void Awake()
     {
@@ -28,6 +29,16 @@ public class SubmarineOxygen : MonoBehaviour
         power = GetComponent<SubmarinePower>();
     }
 
+    // Returns the amount actually restored; a failed voyage cannot be revived.
+    public float AddOxygen(float seconds)
+    {
+        if (failed || !isActiveAndEnabled || seconds <= 0f) return 0f;
+        float previous = oxygenRemaining;
+        oxygenRemaining = Mathf.Min(Mathf.Max(0f, oxygenDuration), oxygenRemaining + seconds);
+        float restored = oxygenRemaining - previous;
+        OxygenCollected?.Invoke(restored);
+        return restored;
+    }
     private void Update()
     {
         if (failed)

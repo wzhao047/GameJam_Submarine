@@ -90,6 +90,7 @@ public class LeakRepairInteraction : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         bool clicked = false;
         Vector2 position = Vector2.zero;
 

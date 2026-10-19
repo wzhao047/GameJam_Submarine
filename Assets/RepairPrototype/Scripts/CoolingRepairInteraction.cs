@@ -81,6 +81,7 @@ public class CoolingRepairInteraction : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         if (cooling == null) return;
 
         bool clicked = false;

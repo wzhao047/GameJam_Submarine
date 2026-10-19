@@ -110,6 +110,7 @@ public sealed class RepairHoverOutline : MonoBehaviour
     // Capture before repair Update handlers move a fuse or open the job card UI.
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         if (!ReadPointer(out Vector2 pointer, out bool down, out bool held))
         { RestorePressed(); return; }
 

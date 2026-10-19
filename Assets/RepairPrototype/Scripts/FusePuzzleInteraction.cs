@@ -123,6 +123,7 @@ public class FusePuzzleInteraction : MonoBehaviour
 
     private void Update()
     {
+        if (GameMenuController.IsInputBlocked) return;
         if (!ready || playerCamera == null) return;
 
         if (selected >= 0 && cooling.IsPowered)

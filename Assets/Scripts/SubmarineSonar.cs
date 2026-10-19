@@ -15,6 +15,11 @@ public class SubmarineSonar : MonoBehaviour
     public float scanPeriod = 3f;
     public float echoDuration = 2.5f;
 
+    [Header("Contact colors")]
+    public Color fishColor = new Color(0.65f, 1f, 0.55f);
+    public Color rockColor = new Color(0.15f, 0.7f, 0.3f);
+    public Color oxygenCanisterColor = new Color(0.1f, 0.8f, 1f);
+
     [Header("大型礁体外观")]
     public Color reefFillColor =
         new Color(0.35f, 0.025f, 0.015f);
@@ -204,7 +209,8 @@ public class SubmarineSonar : MonoBehaviour
         int count =
             ocean.Rocks.Length +
             ocean.Fish.Length +
-            ocean.Reefs.Length;
+            ocean.Reefs.Length +
+            ocean.OxygenCanisters.Length;
 
         echoes = new Echo[count];
 
@@ -213,6 +219,7 @@ public class SubmarineSonar : MonoBehaviour
         AddPool(ocean.Rocks, ref index);
         AddPool(ocean.Fish, ref index);
         AddPool(ocean.Reefs, ref index);
+        AddPool(ocean.OxygenCanisters, ref index);
     }
 
     private void AddPool(
@@ -383,7 +390,8 @@ public class SubmarineSonar : MonoBehaviour
     private float GetDepthBrightness(Echo echo)
     {
         if (!fadeSafeObstacles ||
-            echo.kind == RepairContactKind.Fish)
+            echo.kind == RepairContactKind.Fish ||
+            echo.kind == RepairContactKind.OxygenCanister)
         {
             return 1f;
         }
@@ -654,8 +662,10 @@ public class SubmarineSonar : MonoBehaviour
         );
 
         Color tint = echo.kind == RepairContactKind.Fish
-            ? new Color(0.65f, 1f, 0.55f)
-            : new Color(0.15f, 0.7f, 0.3f);
+            ? fishColor
+            : echo.kind == RepairContactKind.OxygenCanister
+                ? oxygenCanisterColor
+                : rockColor;
 
         for (int y = minimumY; y <= maximumY; y++)
         {

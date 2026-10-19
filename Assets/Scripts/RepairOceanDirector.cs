@@ -24,6 +24,17 @@ public class RepairOceanDirector : MonoBehaviour
     [Header("Fish movement / ÓãÈºÒÆ¶¯")]
     public Vector2 fishSpeedRange = new Vector2(2f, 5f);
 
+    [Header("Oxygen canister rewards")]
+    [Min(1)] public int oxygenPoolSize = 4;
+    [Min(1f)] public float oxygenSpawnInterval = 30f;
+    [Min(0f)] public float oxygenRestoreSeconds = 20f;
+    [Min(0.1f)] public float oxygenPickupRadius = 6f;
+    [Min(0f)] public float oxygenDepthSpread = 4f;
+    [Range(0f, 65f)] public float oxygenSpawnAngle = 20f;
+
+    private RepairOceanContact[] oxygenCanisters;
+    private float oxygenTimer;
+    public RepairOceanContact[] OxygenCanisters => oxygenCanisters;
     private RepairOceanContact[] rocks;
     private RepairOceanContact[] fish;
     private RepairOceanContact[] reefs;
@@ -80,6 +91,18 @@ public class RepairOceanDirector : MonoBehaviour
         reefs = reefPool.GetComponentsInChildren
             <RepairOceanContact>(true);
 
+        // Build once at startup; reuse the same contacts throughout the voyage.
+        GameObject rewardPool = new GameObject("OxygenCanisterPool");
+        rewardPool.transform.SetParent(transform, false);
+        oxygenCanisters = new RepairOceanContact[Mathf.Max(1, oxygenPoolSize)];
+        for (int i = 0; i < oxygenCanisters.Length; i++)
+        {
+            GameObject canister = new GameObject("OxygenCanister_" + i);
+            canister.transform.SetParent(rewardPool.transform, false);
+            oxygenCanisters[i] = canister.AddComponent<RepairOceanContact>();
+            oxygenCanisters[i].kind = RepairContactKind.OxygenCanister;
+        }
+        oxygenTimer = Mathf.Max(1f, oxygenSpawnInterval);
         ResetPool(rocks);
         ResetPool(fish);
         ResetPool(reefs);
@@ -95,6 +118,7 @@ public class RepairOceanDirector : MonoBehaviour
             SpawnRock();
 
         SpawnFish();
+        SpawnOxygenCanister();
     }
 
     private void Update()
@@ -107,6 +131,13 @@ public class RepairOceanDirector : MonoBehaviour
         AdvancePool(rocks, dt);
         AdvancePool(fish, dt);
         AdvancePool(reefs, dt);
+        AdvancePool(oxygenCanisters, dt);
+        oxygenTimer -= dt;
+        if (oxygenTimer <= 0f)
+        {
+            SpawnOxygenCanister();
+            oxygenTimer = Mathf.Max(1f, oxygenSpawnInterval);
+        }
 
         rockTimer -= dt;
         fishTimer -= dt;
@@ -188,6 +219,19 @@ public class RepairOceanDirector : MonoBehaviour
         );
     }
 
+    private void SpawnOxygenCanister()
+    {
+        RepairOceanContact item = GetFree(oxygenCanisters);
+        if (item == null) return;
+        Vector3 direction = Direction(controller.Heading +
+            Random.Range(-oxygenSpawnAngle, oxygenSpawnAngle));
+        Vector3 position = BoatPosition + direction *
+            Random.Range(DetectionRange * 0.45f, DetectionRange * 0.7f);
+        position.y = Mathf.Max(1f, controller.Depth +
+            Random.Range(-oxygenDepthSpread, oxygenDepthSpread));
+        item.kind = RepairContactKind.OxygenCanister;
+        item.Activate(position, Vector3.zero, Mathf.Max(0.1f, oxygenPickupRadius));
+    }
     private void SpawnRock()
     {
         RepairOceanContact item = GetFree(rocks);

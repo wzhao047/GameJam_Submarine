@@ -93,9 +93,9 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
     {
         if (collisionMovement == null && collisionHull == null)
         {
-            collisionHull = FindFirstObjectByType<SubmarineHull>();
+            collisionHull = FindAnyObjectByType<SubmarineHull>();
             if (collisionHull == null)
-                collisionMovement = FindFirstObjectByType<SubmarineMovement>();
+                collisionMovement = FindAnyObjectByType<SubmarineMovement>();
         }
         subscribedMovement = collisionMovement;
         if (subscribedMovement != null)

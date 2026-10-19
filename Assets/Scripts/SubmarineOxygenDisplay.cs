@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class SubmarineOxygenDisplay : MonoBehaviour
 {
@@ -26,6 +27,12 @@ public class SubmarineOxygenDisplay : MonoBehaviour
     [Range(0f, 100f)]
     public float calibrationPercentage = 100f;
 
+    [Header("Pickup feedback")]
+    public Color pickupColor = new Color(0.4f, 1f, 1f);
+    [Min(0.1f)] public float pickupFeedbackDuration = 2f;
+    private float pickupTimer;
+    private GameObject feedbackRoot;
+    private TextMeshProUGUI pickupLabel;
     private int lastPercentage = -1;
 
     private void Start()
@@ -41,14 +48,82 @@ public class SubmarineOxygenDisplay : MonoBehaviour
             return;
         }
 
+        CreatePickupFeedback();
+        oxygen.OxygenCollected += ShowPickupFeedback;
         RefreshDisplay();
     }
 
     private void Update()
     {
+        pickupTimer = Mathf.Max(0f, pickupTimer - Time.deltaTime);
+        AnimatePickupFeedback();
         RefreshDisplay();
     }
 
+    private void CreatePickupFeedback()
+    {
+        feedbackRoot = new GameObject("Oxygen Pickup Feedback", typeof(Canvas), typeof(CanvasScaler));
+        Canvas canvas = feedbackRoot.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        CanvasScaler scaler = feedbackRoot.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+        GameObject labelObject = new GameObject("Pickup Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObject.transform.SetParent(feedbackRoot.transform, false);
+        pickupLabel = labelObject.GetComponent<TextMeshProUGUI>();
+        pickupLabel.font = oxygenText.font;
+        pickupLabel.fontSize = 32f;
+        pickupLabel.fontStyle = FontStyles.Bold;
+        pickupLabel.alignment = TextAlignmentOptions.Center;
+        pickupLabel.raycastTarget = false;
+        RectTransform rect = pickupLabel.rectTransform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.8f);
+        rect.sizeDelta = new Vector2(600f, 70f);
+        feedbackRoot.SetActive(false);
+    }
+
+    private void ShowPickupFeedback(float restored)
+    {
+        if (!isActiveAndEnabled || pickupLabel == null) return;
+        pickupTimer = Mathf.Max(0.1f, pickupFeedbackDuration);
+        pickupLabel.text = restored > 0.01f
+            ? $"OXYGEN +{restored:0.#}s"
+            : "OXYGEN FULL";
+        feedbackRoot.SetActive(true);
+        AnimatePickupFeedback();
+    }
+
+    private void AnimatePickupFeedback()
+    {
+        if (pickupLabel == null) return;
+        if (pickupTimer <= 0f)
+        {
+            feedbackRoot.SetActive(false);
+            return;
+        }
+        float progress = 1f - pickupTimer / Mathf.Max(0.1f, pickupFeedbackDuration);
+        float eased = 1f - (1f - progress) * (1f - progress);
+        pickupLabel.rectTransform.anchoredPosition = new Vector2(0f, eased * 30f);
+        pickupLabel.rectTransform.localScale = Vector3.one *
+            (1f + 0.15f * Mathf.Clamp01(1f - progress * 5f));
+        Color tint = pickupColor;
+        tint.a *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, progress));
+        pickupLabel.color = tint;
+    }
+
+    private void OnDisable()
+    {
+        pickupTimer = 0f;
+        if (feedbackRoot != null) feedbackRoot.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (oxygen != null) oxygen.OxygenCollected -= ShowPickupFeedback;
+        if (feedbackRoot != null) Destroy(feedbackRoot);
+    }
     private void RefreshDisplay()
     {
         float percentage = calibrationMode
@@ -72,5 +147,12 @@ public class SubmarineOxygenDisplay : MonoBehaviour
             percentage <= warningPercentage
                 ? warningColor
                 : normalColor;
+
+        if (pickupTimer > 0f)
+        {
+            float elapsed = Mathf.Max(0.1f, pickupFeedbackDuration) - pickupTimer;
+            float flash = Mathf.Clamp01(1f - elapsed / 0.8f);
+            oxygenText.color = Color.Lerp(oxygenText.color, pickupColor, flash);
+        }
     }
 }
