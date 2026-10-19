@@ -113,11 +113,7 @@ public class SubmarineController : MonoBehaviour
                 if (keyboard.dKey.isPressed)
                     turnInput += 1f;
 
-                if (keyboard.qKey.wasPressedThisFrame)
-                    ChangeTrim(-trimStep);
 
-                if (keyboard.eKey.wasPressedThisFrame)
-                    ChangeTrim(trimStep);
             }
 
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -139,11 +135,7 @@ public class SubmarineController : MonoBehaviour
             if (Input.GetKey(KeyCode.D))
                 turnInput += 1f;
 
-            if (Input.GetKeyDown(KeyCode.Q))
-                ChangeTrim(-trimStep);
 
-            if (Input.GetKeyDown(KeyCode.E))
-                ChangeTrim(trimStep);
 #endif
         }
 
