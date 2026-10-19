@@ -272,11 +272,12 @@ public class GameMenuController : MonoBehaviour
         label.transform.SetParent(parent, false);
         var uiText = label.GetComponent<Text>();
         if (menuFont == null)
-            menuFont = Font.CreateDynamicFontFromOSFont(
-                new[] { "Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "Arial" }, 32);
+            menuFont = Resources.Load<Font>("MenuFont")
+                ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         uiText.font = font != null ? font : menuFont;
         uiText.text = text;
         uiText.fontSize = size;
+        uiText.lineSpacing = 1.15f;
         uiText.alignment = TextAnchor.MiddleLeft;
         uiText.fontStyle = size >= 30 ? FontStyle.Bold : FontStyle.Normal;
         uiText.color = selectedColor;
@@ -695,7 +696,6 @@ public class GameMenuController : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (menuFont != null) Destroy(menuFont);
         RestoreGameplayUI();
         RestoreGameplayCamera();
         IsStartMenuVisible = false;

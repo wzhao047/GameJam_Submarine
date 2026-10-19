@@ -28,9 +28,9 @@ public class RepairPaperDrag : MonoBehaviour,
 
         Text label = hint.GetComponent<Text>();
         label.text = "Right-click to close repair sheet";
-        label.font = Font.CreateDynamicFontFromOSFont(
-            new[] { "Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "Arial" }, 24);
+        label.font = Resources.Load<Font>("MenuFont") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         label.fontSize = 24;
+        label.lineSpacing = 1.15f;
         label.alignment = TextAnchor.MiddleCenter;
         label.color = new Color(0.95f, 0.93f, 0.82f);
         label.raycastTarget = false;

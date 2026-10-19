@@ -68,8 +68,7 @@ public sealed class RepairEndingCredits : MonoBehaviour
         IsVisible = true;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        displayFont = font != null ? font : Font.CreateDynamicFontFromOSFont(
-            new[] { "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Arial" }, 32);
+        displayFont = font != null ? font : Resources.Load<Font>("MenuFont");
         if (displayFont == null) displayFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         EnsureEventSystem();
         BuildCanvas();

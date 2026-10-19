@@ -59,7 +59,7 @@ MonoBehaviour:
   menuMusicVolume: 0.3
   menuHoverVolume: 0.2
   menuClickVolume: 0.5
-  font: {fileID: 0}
+  font: {fileID: 12800000, guid: 113959414ec744bfb897b426453df1df, type: 3}
   titleSize: 68
   buttonSize: 34
   textColor: {r: 0.65, g: 0.64, b: 0.57, a: 1}

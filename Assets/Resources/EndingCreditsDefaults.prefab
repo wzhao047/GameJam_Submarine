@@ -104,7 +104,7 @@ MonoBehaviour:
   openingHold: 2.5
   endingHold: 1.5
   doubleClickWindow: 0.35
-  font: {fileID: 0}
+  font: {fileID: 12800000, guid: 113959414ec744bfb897b426453df1df, type: 3}
   backgroundColor: {r: 0.025, g: 0.047, b: 0.063, a: 1}
   titleColor: {r: 1, g: 0.93, b: 0.72, a: 1}
   bodyColor: {r: 0.78, g: 0.81, b: 0.79, a: 1}
