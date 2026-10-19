@@ -10,34 +10,43 @@ public class LeakRepairInteraction : MonoBehaviour
     [Header("Debug UI")]
     public bool showDebugUI = false;
 
-    [Header("Íæ¼ÒÏà»ú")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Camera playerCamera;
 
-    [Header("Î¬ÐÞ¶ÔÏó")]
+    [Header("Î¬ï¿½Þ¶ï¿½ï¿½ï¿½")]
     public Transform pipeJoint;
     public Transform valve;
     public GameObject sealingClamp;
 
-    [Header("¹²ÓÃ¹¤¾ßÏä")]
+    [Header("ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public RepairSharedToolbox sharedToolbox;
 
     public float interactionDistance = 10f;
 
+    [Header("Valve visual rotation")]
+    [Min(0.01f)] public float valveRotationDuration = 0.35f;
+
     private bool faultActive;
     private bool jointInspected;
     private bool valveClosed;
+    private Transform valveRotationTarget;
+    private Vector3 valveEulerAngles;
+    private float valveCurrentX;
+    private float valveStartX;
+    private float valveRotationElapsed;
+    private bool valveRotating;
     private bool clampInstalled;
     private bool repaired;
 
     private string message = "Pipe system normal.";
 
-    // ¹ÊÕÏ°üº¬¡°ÒÑ¾­°²×°ÃÜ·â¼Ð£¬µ«ÉÐÎ´¸´²é¡±µÄ½×¶Î¡£
+    // ï¿½ï¿½ï¿½Ï°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½×°ï¿½Ü·ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½é¡±ï¿½Ä½×¶Î¡ï¿½
     public bool HasFault => faultActive;
 
     public bool CanTriggerFault =>
         isActiveAndEnabled && !faultActive;
 
-    // Êµ¼ÊÊÇ·ñÕýÔÚ½øË®£¬Óë¹ÊÕÏÊÇ·ñÍê³ÉÎ¬ÐÞ·Ö¿ªÅÐ¶Ï¡£
+    // Êµï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ú½ï¿½Ë®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Î¬ï¿½Þ·Ö¿ï¿½ï¿½Ð¶Ï¡ï¿½
     public bool IsLeaking =>
         faultActive && !valveClosed && !clampInstalled;
 
@@ -58,7 +67,7 @@ public class LeakRepairInteraction : MonoBehaviour
             sealingClamp.SetActive(clampInstalled);
     }
 
-    // ºóÐøÍ³Ò»¹ÊÕÏµ÷¶ÈÆ÷µ÷ÓÃÕâ¸ö·½·¨¡£
+    // ï¿½ï¿½ï¿½ï¿½Í³Ò»ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     public bool TriggerFault()
     {
         if (!CanTriggerFault) return false;
@@ -71,7 +80,7 @@ public class LeakRepairInteraction : MonoBehaviour
         if (sealingClamp != null)
             sealingClamp.SetActive(false);
 
-        // ±£Áô·§ÃÅ×´Ì¬£¬²»ÄÜÇ¿ÐÐÌæÍæ¼Ò¿ª·§¡£
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¿ï¿½ï¿½ï¿½ï¿½ï¿½
         message = valveClosed
             ? "Pipe fault detected. V1 is already closed."
             : "Leak warning. Inspect the pipe joint.";
@@ -122,6 +131,21 @@ public class LeakRepairInteraction : MonoBehaviour
 
     private void ToggleValve()
     {
+        if (valve != null)
+        {
+            if (valveRotationTarget != valve)
+            {
+                valveRotationTarget = valve;
+                valveEulerAngles = valve.localEulerAngles;
+                valveCurrentX = valveEulerAngles.x;
+            }
+            // Retain every click, including clicks during an unfinished turn.
+            // Unwrapped Euler angles keep X moving forward across 360 degrees.
+            valveStartX = valveCurrentX;
+            valveEulerAngles.x += 50f;
+            valveRotationElapsed = 0f;
+            valveRotating = true;
+        }
         valveClosed = !valveClosed;
 
         if (valveClosed)
@@ -140,6 +164,29 @@ public class LeakRepairInteraction : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        if (!valveRotating) return;
+        if (valve == null || valve != valveRotationTarget)
+        { valveRotating = false; return; }
+
+        valveRotationElapsed += Time.deltaTime;
+        float progress = Mathf.Clamp01(valveRotationElapsed / Mathf.Max(0.01f, valveRotationDuration));
+        valveCurrentX = Mathf.Lerp(valveStartX, valveEulerAngles.x, Mathf.SmoothStep(0f, 1f, progress));
+        valve.localRotation = Quaternion.Euler(valveCurrentX, valveEulerAngles.y, valveEulerAngles.z);
+        if (progress >= 1f) valveRotating = false;
+    }
+
+    private void OnDisable()
+    {
+        // Finish the visual state if the voyage ends or this component is disabled.
+        if (valveRotating && valve != null && valve == valveRotationTarget)
+        {
+            valveCurrentX = valveEulerAngles.x;
+            valve.localRotation = Quaternion.Euler(valveEulerAngles);
+        }
+        valveRotating = false;
+    }
     private void InteractWithJoint()
     {
         if (!faultActive)

@@ -10,18 +10,28 @@ public class CoolingRepairInteraction : MonoBehaviour
     [Header("Debug UI")]
     public bool showDebugUI = false;
 
-    [Header("Íæ¼ÒÏà»ú")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Camera playerCamera;
 
-    [Header("Î¬ÐÞ¶ÔÏó")]
+    [Header("Î¬ï¿½Þ¶ï¿½ï¿½ï¿½")]
     public Transform coolingJoint;
     public Transform powerSwitch;
 
-    [Header("ÎÂ¶ÈÏµÍ³ºÍ¹²ÓÃ¹¤¾ßÏä")]
+    [Header("ï¿½Â¶ï¿½ÏµÍ³ï¿½Í¹ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public RepairCoolingPrototype cooling;
     public RepairSharedToolbox sharedToolbox;
 
     public float interactionDistance = 10f;
+
+    [Header("SwitchKid power-state visuals")]
+    public Transform switchKid;
+    public Material poweredOnMaterial;
+    public Material poweredOffMaterial;
+    private Renderer[] switchRenderers;
+    private Material[][] originalSwitchMaterials;
+    private Vector3 switchEulerAngles;
+    private bool switchVisualsInitialized;
+    private bool displayedPower;
 
     private bool inspected;
     private bool fixedJoint;
@@ -31,7 +41,7 @@ public class CoolingRepairInteraction : MonoBehaviour
 
     public bool Repaired => verified;
 
-    // ÒÑÐÞºÃµ«ÉÐÎ´Í¨µç¸´²é£¬Ò²Ëã±¾´Î¹ÊÕÏÉÐÎ´´¦ÀíÍê¡£
+    // ï¿½ï¿½ï¿½ÞºÃµï¿½ï¿½ï¿½Î´Í¨ï¿½ç¸´ï¿½é£¬Ò²ï¿½ã±¾ï¿½Î¹ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ê¡£
     public bool HasFault =>
         cooling != null &&
         (cooling.HasFault || (fixedJoint && !verified));
@@ -46,9 +56,11 @@ public class CoolingRepairInteraction : MonoBehaviour
     {
         if (playerCamera == null)
             playerCamera = Camera.main;
+
+        RefreshSwitchVisuals();
     }
 
-    // ¹©Í³Ò»¹ÊÕÏµ÷¶ÈÆ÷µ÷ÓÃ¡£
+    // ï¿½ï¿½Í³Ò»ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¡ï¿½
     public bool TriggerFault()
     {
         if (!CanTriggerFault) return false;
@@ -59,7 +71,7 @@ public class CoolingRepairInteraction : MonoBehaviour
 
         cooling.SetCoolingFault(true);
 
-        // ±£ÁôÎÂ¶ÈºÍ¹²ÓÃ¿ª¹Ø×´Ì¬£¬²»ÌæÍæ¼Ò²Ù×÷¡£
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ÈºÍ¹ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½
         message = cooling.IsPowered
             ? "Cooling warning. Inspect the equipment."
             : "Cooling fault detected. Circuit is already OFF.";
@@ -113,12 +125,64 @@ public class CoolingRepairInteraction : MonoBehaviour
     private void TogglePower()
     {
         cooling.SetPower(!cooling.IsPowered);
+        RefreshSwitchVisuals();
 
         message = cooling.IsPowered
             ? "Shared circuit ON."
             : "Shared circuit OFF.";
     }
 
+    private void LateUpdate()
+    {
+        // Also follow power changes made outside this click handler.
+        RefreshSwitchVisuals();
+    }
+
+    private void RefreshSwitchVisuals()
+    {
+        if (cooling == null) return;
+        if (!switchVisualsInitialized)
+        {
+            if (switchKid == null && powerSwitch != null)
+                foreach (var candidate in powerSwitch.GetComponentsInChildren<Transform>(true))
+                    if (string.Equals(candidate.name, "SwitchKid", System.StringComparison.OrdinalIgnoreCase))
+                    { switchKid = candidate; break; }
+            if (switchKid == null) return;
+            if (poweredOnMaterial == null) poweredOnMaterial = Resources.Load<Material>("SwitchPowerOn");
+            if (poweredOffMaterial == null) poweredOffMaterial = Resources.Load<Material>("SwitchPowerOff");
+            switchEulerAngles = switchKid.localEulerAngles;
+            switchRenderers = switchKid.GetComponentsInChildren<MeshRenderer>(true);
+            originalSwitchMaterials = new Material[switchRenderers.Length][];
+            for (int i = 0; i < switchRenderers.Length; i++)
+                originalSwitchMaterials[i] = switchRenderers[i].sharedMaterials;
+            switchVisualsInitialized = true;
+            ApplySwitchVisuals();
+        }
+        else if (cooling.IsPowered != displayedPower) ApplySwitchVisuals();
+    }
+
+    private void ApplySwitchVisuals()
+    {
+        displayedPower = cooling.IsPowered;
+        switchKid.localRotation = Quaternion.Euler(displayedPower ? -12f : 12f,
+            switchEulerAngles.y, switchEulerAngles.z);
+        Material material = displayedPower ? poweredOnMaterial : poweredOffMaterial;
+        if (material == null) return;
+        foreach (var renderer in switchRenderers)
+        {
+            if (renderer == null) continue;
+            var slots = new Material[renderer.sharedMaterials.Length];
+            for (int i = 0; i < slots.Length; i++) slots[i] = material;
+            renderer.sharedMaterials = slots;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (!switchVisualsInitialized) return;
+        for (int i = 0; i < switchRenderers.Length; i++)
+            if (switchRenderers[i] != null) switchRenderers[i].sharedMaterials = originalSwitchMaterials[i];
+    }
     private void InteractWithJoint()
     {
         if (!HasFault)
