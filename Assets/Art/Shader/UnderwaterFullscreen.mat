@@ -30,7 +30,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Brightness: 0
-    - _CollisionGlitchDuration: 0.43
+    - _CollisionGlitchDuration: 0.54
     - _CollisionGlitchElapsed: -1
     - _CollisionGlitchStrength: 0.928
     - _ColorNoise: 0.789
@@ -42,17 +42,17 @@ Material:
     - _DistortionStrength: 0
     - _EffectTime: 0
     - _Exposure: 0
-    - _GlitchBandHeight: 10.4
-    - _GlitchBlockStrength: 0.228
+    - _GlitchBandHeight: 18.8
+    - _GlitchBlockStrength: 0.367
     - _GlitchChance: 0.528
     - _GlitchDuration: 0.37
     - _GlitchFPS: 20
-    - _GlitchInterval: 4
+    - _GlitchInterval: 7.3
     - _GlitchPreview: 0
-    - _GlitchRGBSplit: 21.2
+    - _GlitchRGBSplit: 23.8
     - _GlitchSeed: 1
     - _GlitchStrength: 0.283
-    - _GlitchTearStrength: 0.0195
+    - _GlitchTearStrength: 0.0317
     - _HueShift: -15
     - _Intensity: 0.24
     - _NoiseContrast: 1
