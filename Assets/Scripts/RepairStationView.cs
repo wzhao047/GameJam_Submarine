@@ -26,6 +26,10 @@ public class RepairStationView : MonoBehaviour
     private bool transitioning;
     private Coroutine transition;
 
+    public int CurrentStationIndex => currentIndex;
+    public bool IsTransitioning => transitioning;
+    public event System.Action ViewChanging;
+
     public bool IsDriving =>
         isActiveAndEnabled &&
         currentIndex == 1 &&
@@ -101,6 +105,7 @@ public class RepairStationView : MonoBehaviour
 
         currentIndex = nextIndex;
         transitioning = true;
+        ViewChanging?.Invoke();
 
         transition = StartCoroutine(MoveToView(target));
         RefreshButtons();
