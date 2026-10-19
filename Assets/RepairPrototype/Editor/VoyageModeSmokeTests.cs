@@ -252,7 +252,8 @@ public static class VoyageModeSmokeTests
         while (!hull.HasFailed) { Set(hull, "damageProtectionUntil", -1f); Invoke(hull, "TakeCollisionDamage"); }
         Assert(hull.CollisionCount == 3, "third hull damage is fatal");
         Invoke(result, "LateUpdate");
-        Assert(((GameObject)Get(menu, "resultMenu")).activeSelf && Time.timeScale == 0f, "results offer paused retry and mode selection");
+        Assert(RepairEndingCredits.IsVisible && Time.timeScale == 0f && mode.Ended,
+            "ending credits display after recording the voyage and pausing gameplay");
         // Screenshots must not accidentally publish test records.
     }
 

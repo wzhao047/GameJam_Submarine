@@ -337,6 +337,7 @@ public class GameMenuController : MonoBehaviour
 
     private void Update()
     {
+        if (RepairEndingCredits.IsVisible) return;
 #if ENABLE_INPUT_SYSTEM
         bool escapePressed =
             Keyboard.current != null &&
@@ -369,7 +370,7 @@ public class GameMenuController : MonoBehaviour
 
     public void PauseGame()
     {
-        if (!started) return;
+        if (!started || RepairEndingCredits.IsVisible) return;
 
         pausePanel.SetActive(true);
         SetPaused(true);
@@ -378,7 +379,7 @@ public class GameMenuController : MonoBehaviour
 
     public void ResumeGame()
     {
-        if (!started || ended || (modePanel != null && modePanel.activeSelf)) return;
+        if (!started || ended || RepairEndingCredits.IsVisible || (modePanel != null && modePanel.activeSelf)) return;
 
         pausePanel.SetActive(false);
         SetPaused(false);
@@ -494,6 +495,14 @@ public class GameMenuController : MonoBehaviour
         FocusPanel(ended ? resultMenu : started ? pausePanel : startPanel);
     }
 
+    public void BeginEnding()
+    {
+        ended = true;
+        startPanel.SetActive(false);
+        pausePanel.SetActive(false);
+        if (modePanel != null) modePanel.SetActive(false);
+        SetPaused(true);
+    }
     public void ShowResultMenu(string summary)
     {
         if (resultMenu != null) Destroy(resultMenu);

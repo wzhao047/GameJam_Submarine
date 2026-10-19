@@ -28,6 +28,9 @@ public class RepairVoyageResult : MonoBehaviour
     public GameObject resultPanel;
     public TMP_Text resultText;
 
+    [Header("Ending credits (optional scene override)")]
+    public RepairEndingCredits endingCredits;
+
     private SubmarineHull hull;
     private bool ended;
     private float startTime;
@@ -150,21 +153,14 @@ public class RepairVoyageResult : MonoBehaviour
         float elapsed = Time.time - startTime;
         string report = record.BuildReport();
 
-        string title = success
-            ? "VOYAGE COMPLETE"
-            : "VOYAGE FAILED";
-
         resultText.text =
-            title + "\n\n" +
-            $"Result: {cause}\n" +
             $"Voyage time: {elapsed:F0} s\n" +
             $"Travelled: {controller.DistanceTravelled:F0} m\n" +
             $"Forward progress: {controller.NavigationPosition.y:F0} m\n" +
             $"Oxygen remaining: {oxygen.OxygenPercentage:F0}%\n" +
             $"Hull remaining: {hull.HullPercentage:F0}%\n" +
             $"Collisions: {hull.CollisionCount}/3\n\n" +
-            report +
-            "\n\nClick Restart to begin a new voyage.";
+            report;
 
         StopScript(director);
         StopScript(controller);
@@ -211,17 +207,29 @@ public class RepairVoyageResult : MonoBehaviour
                 source.Stop();
         }
 
-        var menu = FindAnyObjectByType<GameMenuController>();
         var mode = VoyageModeSession.Current;
-        string summary = mode != null ? mode.Finish(success) : $"Voyage time: {elapsed:F0}s";
-        if (menu != null)
+        if (mode != null) resultText.text = mode.Finish(success) + "\n\n" + report;
+        var menu = FindAnyObjectByType<GameMenuController>();
+        if (menu != null) menu.BeginEnding();
+        // Keep the old scene UI hidden; its references remain valid for existing scenes.
+        resultPanel.SetActive(false);
+        if (endingCredits == null)
         {
-            resultPanel.SetActive(false);
-            menu.ShowResultMenu((success ? "VOYAGE COMPLETE" : "VOYAGE FAILED") + "\n" + cause + "\n\n" + summary);
-            return;
+            var template = Resources.Load<RepairEndingCredits>("EndingCreditsDefaults");
+            endingCredits = template != null
+                ? Instantiate(template)
+                : new GameObject("Ending credits", typeof(RectTransform)).AddComponent<RepairEndingCredits>();
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(endingCredits.gameObject, gameObject.scene);
         }
-        resultPanel.SetActive(true);
-        resultPanel.transform.SetAsLastSibling();
+        endingCredits.gameObject.SetActive(true);
+        endingCredits.Show(success, cause, resultText.text, RestartFromEnding);
+    }
+
+    private void RestartFromEnding()
+    {
+        var restart = GetComponent<RepairRestart>();
+        if (restart == null) restart = gameObject.AddComponent<RepairRestart>();
+        restart.RestartVoyage();
     }
 
     private void StopScript(MonoBehaviour script)
