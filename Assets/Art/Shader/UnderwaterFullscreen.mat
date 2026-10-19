@@ -12,8 +12,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _GLITCHPREVIEW_ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -31,6 +30,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _Brightness: 0
+    - _CollisionGlitchDuration: 0.35
+    - _CollisionGlitchElapsed: -1
+    - _CollisionGlitchStrength: 0.85
     - _ColorNoise: 0.789
     - _Contrast: 2
     - _ContrastPivot: 0
@@ -46,7 +48,7 @@ Material:
     - _GlitchDuration: 0.37
     - _GlitchFPS: 20
     - _GlitchInterval: 4
-    - _GlitchPreview: 1
+    - _GlitchPreview: 0
     - _GlitchRGBSplit: 21.2
     - _GlitchSeed: 1
     - _GlitchStrength: 0.283

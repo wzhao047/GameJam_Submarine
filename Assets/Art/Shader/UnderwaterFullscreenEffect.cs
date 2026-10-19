@@ -4,6 +4,7 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>Camera-local fullscreen presentation, without editing shared URP renderer assets.</summary>
 [DisallowMultipleComponent, RequireComponent(typeof(Camera))]
+[DefaultExecutionOrder(100)]
 public sealed class UnderwaterFullscreenEffect : MonoBehaviour
 {
     [Tooltip("Edit this material to tune noise, hue and distortion, including during Play mode.")]
@@ -14,6 +15,10 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
     public int canvasSortingOrder = -100;
     [Range(0.5f, 1f)] public float resolutionScale = 1f;
 
+    [Header("Collision sources (auto-detected when empty)")]
+    public SubmarineMovement collisionMovement;
+    public SubmarineHull collisionHull;
+
     private Camera sourceCamera;
     private Camera displayCamera;
     private RenderTexture originalTarget;
@@ -22,6 +27,10 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
     private Canvas presentationCanvas;
     private RawImage presentation;
     private float effectTime;
+    private float collisionGlitchElapsed = -1f;
+    private SubmarineMovement subscribedMovement;
+    private static readonly int CollisionElapsedId = Shader.PropertyToID("_CollisionGlitchElapsed");
+    private static readonly int CollisionDurationId = Shader.PropertyToID("_CollisionGlitchDuration");
 
     private void OnEnable()
     {
@@ -75,7 +84,46 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
         cameraData.requiresDepthOption = CameraOverrideOption.Off;
         cameraData.volumeLayerMask = 0;
         effectTime = 0f;
+        collisionGlitchElapsed = -1f;
+        BindCollisionSources();
         LateUpdate();
+    }
+
+    private void BindCollisionSources()
+    {
+        if (collisionMovement == null && collisionHull == null)
+        {
+            collisionHull = FindFirstObjectByType<SubmarineHull>();
+            if (collisionHull == null)
+                collisionMovement = FindFirstObjectByType<SubmarineMovement>();
+        }
+        subscribedMovement = collisionMovement;
+        if (subscribedMovement != null)
+            subscribedMovement.CollisionEntered += OnMovementCollision;
+        RepairOceanContact.HitRegistered += OnLegacyContact;
+    }
+
+    private void OnMovementCollision(float impactSpeed) => TriggerCollisionGlitch();
+
+    private void OnLegacyContact(RepairOceanContact contact)
+    {
+        if (collisionHull == null || !collisionHull.isActiveAndEnabled || collisionHull.ocean == null)
+            return;
+        RepairOceanDirector ocean = collisionHull.ocean;
+        if (ContainsContact(ocean.Rocks, contact) || ContainsContact(ocean.Fish, contact)
+            || ContainsContact(ocean.Reefs, contact))
+            TriggerCollisionGlitch();
+    }
+
+    private static bool ContainsContact(RepairOceanContact[] pool, RepairOceanContact contact)
+        => pool != null && System.Array.IndexOf(pool, contact) >= 0;
+
+    [ContextMenu("Trigger Collision Glitch")]
+    public void TriggerCollisionGlitch()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || runtimeMaterial == null) return;
+        // A fresh impact restarts this short burst without changing the random schedule.
+        collisionGlitchElapsed = 0f;
     }
 
     private void LateUpdate()
@@ -83,7 +131,16 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
         if (presentation == null || effectMaterial == null) return;
         // Copy editable asset values into a private material; animation never dirties the asset.
         runtimeMaterial.CopyPropertiesFromMaterial(effectMaterial);
-        if (!freezeAnimation) effectTime += Time.deltaTime;
+        if (!freezeAnimation)
+        {
+            effectTime += Time.deltaTime;
+            if (collisionGlitchElapsed >= 0f) collisionGlitchElapsed += Time.deltaTime;
+        }
+        if (collisionGlitchElapsed >= 0f && runtimeMaterial.HasProperty(CollisionDurationId)
+            && collisionGlitchElapsed >= Mathf.Max(0f, runtimeMaterial.GetFloat(CollisionDurationId)))
+            collisionGlitchElapsed = -1f;
+        if (runtimeMaterial.HasProperty(CollisionElapsedId))
+            runtimeMaterial.SetFloat(CollisionElapsedId, collisionGlitchElapsed);
         runtimeMaterial.SetFloat("_EffectTime", effectTime);
         presentationCanvas.sortingOrder = canvasSortingOrder;
         presentationCanvas.enabled = sourceCamera.enabled;
@@ -124,6 +181,11 @@ public sealed class UnderwaterFullscreenEffect : MonoBehaviour
 
     private void OnDisable()
     {
+        if (subscribedMovement != null)
+            subscribedMovement.CollisionEntered -= OnMovementCollision;
+        subscribedMovement = null;
+        RepairOceanContact.HitRegistered -= OnLegacyContact;
+        collisionGlitchElapsed = -1f;
         if (displayCamera != null)
         {
             displayCamera.enabled = false;

@@ -43,17 +43,21 @@ Shader "Submarine/UnderwaterFullscreen"
         _SignalJitterFPS ("Signal Jitter Frames Per Second", Range(0,60)) = 12
         _RGBSplit ("RGB Separation (pixels)", Range(0,8)) = 0
         [Header(Random Glitch)]
-        _GlitchStrength ("Glitch Strength", Range(0,1)) = 0
+        _GlitchStrength ("Random Glitch Strength", Range(0,1)) = 0
         _GlitchInterval ("Glitch Trigger Interval (seconds)", Range(0.2,30)) = 6
         _GlitchChance ("Glitch Chance per Interval", Range(0,1)) = 0.6
-        _GlitchDuration ("Glitch Burst Duration (seconds)", Range(0.05,2)) = 0.25
+        _GlitchDuration ("Random Glitch Duration (seconds)", Range(0.05,2)) = 0.25
+        [Header(Collision Glitch)]
+        _CollisionGlitchStrength ("Collision Glitch Strength", Range(0,1)) = 0.85
+        _CollisionGlitchDuration ("Collision Glitch Duration (seconds)", Range(0,2)) = 0.35
+        [Header(Glitch Appearance)]
         _GlitchTearStrength ("Glitch Horizontal Tear (screen fraction)", Range(0,0.1)) = 0.025
         _GlitchBlockStrength ("Glitch Block Interference", Range(0,1)) = 0.5
         _GlitchBandHeight ("Glitch Band Height (pixels)", Range(2,128)) = 24
         _GlitchRGBSplit ("Glitch RGB Separation (pixels)", Range(0,32)) = 8
         _GlitchFPS ("Glitch Frames Per Second", Range(1,60)) = 20
         _GlitchSeed ("Glitch Random Seed", Float) = 1
-        [Toggle] _GlitchPreview ("Preview Continuous Glitch", Float) = 0
+        [Toggle] _GlitchPreview ("Preview Continuous Random Glitch", Float) = 0
         [Header(Water Distortion)]
         _DistortionStrength ("Distortion Strength (screen fraction)", Range(0,0.05)) = 0.004
         _DistortionScale ("Distortion Scale", Range(0.1,15)) = 3
@@ -61,6 +65,7 @@ Shader "Submarine/UnderwaterFullscreen"
         [Header(Debug)]
         [Enum(Final,0,Original,1,Noise,2,Distortion,3,ColorGrading,4,VignetteMask,5,ScreenPattern,6)] _DebugMode ("Debug View", Float) = 0
         [HideInInspector] _EffectTime ("Effect Time", Float) = 0
+        [HideInInspector] _CollisionGlitchElapsed ("Collision Glitch Elapsed", Float) = -1
     }
     SubShader
     {
@@ -84,6 +89,7 @@ Shader "Submarine/UnderwaterFullscreen"
             float _GlitchStrength, _GlitchInterval, _GlitchChance, _GlitchDuration;
             float _GlitchTearStrength, _GlitchBlockStrength, _GlitchBandHeight;
             float _GlitchRGBSplit, _GlitchFPS, _GlitchSeed, _GlitchPreview;
+            float _CollisionGlitchStrength, _CollisionGlitchDuration, _CollisionGlitchElapsed;
             float _HueShift, _Saturation, _TintStrength;
             float _Exposure, _Brightness, _Contrast, _ContrastPivot;
             float _Temperature, _WhiteBalanceTint;
@@ -194,7 +200,11 @@ Shader "Submarine/UnderwaterFullscreen"
                 float band = floor(pixel.y/max(_SignalBandHeight,1));
                 offset.x += (Hash(float2(band+47.3,jitterFrame+91.7))*2-1)
                           * _SignalJitterStrength*edge.x*edge.y;
-                float glitch = GlitchEnvelope()*saturate(_GlitchStrength);
+                float collisionActive = step(0,_CollisionGlitchElapsed)
+                                      * (1-step(max(_CollisionGlitchDuration,0),_CollisionGlitchElapsed));
+                // The two timers are independent; overlapping bursts use the stronger effect.
+                float glitch = max(GlitchEnvelope()*saturate(_GlitchStrength),
+                                   collisionActive*saturate(_CollisionGlitchStrength));
                 float glitchFrame = floor(_EffectTime*max(_GlitchFPS,1));
                 float glitchBand = floor(pixel.y/max(_GlitchBandHeight,2));
                 float glitchBandMask = 0;

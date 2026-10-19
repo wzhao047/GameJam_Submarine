@@ -33,6 +33,9 @@ public class RepairOceanContact : MonoBehaviour
 
     public bool Active => active;
 
+    // Raised only when a fresh contact is accepted by the existing hull collision check.
+    public static event System.Action<RepairOceanContact> HitRegistered;
+
     // 同一个目标在一次生成期间，最多造成一次损伤。
     public bool CanDamage => active && !hitRegistered;
 
@@ -63,6 +66,7 @@ public class RepairOceanContact : MonoBehaviour
             return;
 
         hitRegistered = true;
+        HitRegistered?.Invoke(this);
     }
 
     public void Deactivate()
