@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _GLITCHPREVIEW_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -29,19 +30,55 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Brightness: 0
+    - _ColorNoise: 0.789
+    - _Contrast: 2
+    - _ContrastPivot: 0
     - _DebugMode: 0
-    - _DistortionScale: 2
+    - _DistortionScale: 3.54
     - _DistortionSpeed: 1.71
-    - _DistortionStrength: 0.0041
+    - _DistortionStrength: 0
     - _EffectTime: 0
-    - _HueShift: 2
-    - _Intensity: 0.18
-    - _NoiseFPS: 7.8
-    - _NoiseSize: 5.35
-    - _NoiseStrength: 0.161
-    - _Saturation: 1.3
-    - _TintStrength: 0.49
+    - _Exposure: 0
+    - _GlitchBandHeight: 6.9
+    - _GlitchBlockStrength: 0.161
+    - _GlitchChance: 0.528
+    - _GlitchDuration: 0.37
+    - _GlitchFPS: 20
+    - _GlitchInterval: 4
+    - _GlitchPreview: 1
+    - _GlitchRGBSplit: 21.2
+    - _GlitchSeed: 1
+    - _GlitchStrength: 0.283
+    - _GlitchTearStrength: 0.0195
+    - _HueShift: -15
+    - _Intensity: 0.24
+    - _NoiseContrast: 1
+    - _NoiseFPS: 8.1
+    - _NoiseSize: 5.68
+    - _NoiseStrength: 0.135
+    - _PixelCellSize: 3
+    - _PixelGridStrength: 0
+    - _RGBSplit: 0
+    - _Saturation: 1.55
+    - _ScanlineSpacing: 6.28
+    - _ScanlineSpeed: -10
+    - _ScanlineStrength: 0.089
+    - _SignalBandHeight: 12
+    - _SignalJitterFPS: 12
+    - _SignalJitterStrength: 0
+    - _SubpixelStrength: 0
+    - _Temperature: -20
+    - _TintStrength: 0.366
+    - _VignetteCenterX: 0.5
+    - _VignetteCenterY: 0.5
+    - _VignetteRadius: 0.666
+    - _VignetteRoundness: 0.181
+    - _VignetteSoftness: 0.804
+    - _VignetteStrength: 1
+    - _WhiteBalanceTint: -79
     m_Colors:
     - _Tint: {r: 0, g: 0.6132076, b: 0.3439944, a: 1}
+    - _VignetteColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
