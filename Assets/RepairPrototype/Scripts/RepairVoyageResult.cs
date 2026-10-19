@@ -208,7 +208,7 @@ public class RepairVoyageResult : MonoBehaviour
         }
 
         var mode = VoyageModeSession.Current;
-        if (mode != null) resultText.text = mode.Finish(success) + "\n\n" + report;
+        if (mode != null) mode.Finish(success);
         var menu = FindAnyObjectByType<GameMenuController>();
         if (menu != null) menu.BeginEnding();
         // Keep the old scene UI hidden; its references remain valid for existing scenes.
